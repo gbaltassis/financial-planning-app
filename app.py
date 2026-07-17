@@ -41,9 +41,9 @@ elif target_type == "Μηνιαίες Δόσεις":
     monthly_income = st.sidebar.number_input("Επιθυμητό Μηνιαίο Εισόδημα (σε ΣΗΜΕΡΙΝΗ αξία €)", min_value=0.0, value=1500.0, step=100.0)
     m = st.sidebar.number_input("Για πόσα έτη θα λαμβάνει εισόδημα;", min_value=1, value=20, step=1)
 else: # Μικτό
-    initial_lump_sum = st.sidebar.number_input("Αρχικό Εφάπαξ στη Λήξη (€ Σήμερα)", min_value=0.0, value=15000.0, step=1000.0)
-    annual_lump_sum = st.sidebar.number_input("Ετήσιο Εφάπαξ / π.χ. κάθε Σεπτέμβρη (€ Σήμερα)", min_value=0.0, value=0.0, step=1000.0)
-    monthly_income = st.sidebar.number_input("Επιπλέον Μηνιαίο Εισόδημα (€ Σήμερα)", min_value=0.0, value=500.0, step=100.0)
+    initial_lump_sum = st.sidebar.number_input("Αρχικό Εφάπαξ στη Λήξη (σε ΣΗΜΕΡΙΝΗ αξία €)", min_value=0.0, value=15000.0, step=1000.0)
+    annual_lump_sum = st.sidebar.number_input("Ετήσιο Εφάπαξ / π.χ. κάθε Σεπτέμβρη (σε ΣΗΜΕΡΙΝΗ αξία €)", min_value=0.0, value=0.0, step=1000.0)
+    monthly_income = st.sidebar.number_input("Επιπλέον Μηνιαίο Εισόδημα (σε ΣΗΜΕΡΙΝΗ αξία €)", min_value=0.0, value=500.0, step=100.0)
     m = st.sidebar.number_input("Για πόσα έτη θα λαμβάνει τις δόσεις;", min_value=1, value=4, step=1)
 
 st.sidebar.subheader("3. Ευελιξία & Τακτικές Καταβολές")
