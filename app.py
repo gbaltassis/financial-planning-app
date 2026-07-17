@@ -19,16 +19,17 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 st.title("📈 Στρατηγικός Οικονομικός Σχεδιασμός")
-st.markdown("Υπολογισμός Αποταμιευτικού και Επενδυτικού Πλάνου (v2.0)")
+st.markdown("Υπολογισμός Αποταμιευτικού και Επενδυτικού Πλάνου")
 
 # --- SIDEBAR: ΕΙΣΑΓΩΓΗ ΔΕΔΟΜΕΝΩΝ ---
 st.sidebar.header("Παράμετροι Πελάτη")
 
 st.sidebar.subheader("1. Οικονομικό Περιβάλλον & Κεφάλαιο")
 PV = st.sidebar.number_input("Αρχικό Κεφάλαιο Επένδυσης (€)", min_value=0.0, value=10000.0, step=1000.0)
-n = st.sidebar.number_input("Έτη Συσσώρευσης (μέχρι την ανάγκη)", min_value=1, value=15, step=1)
-r = st.sidebar.number_input("Εκτιμώμενη Ετήσια Απόδοση (%)", min_value=0.0, value=5.0, step=0.1) / 100
-i = st.sidebar.number_input("Εκτιμώμενος Πληθωρισμός (%)", min_value=0.0, value=2.0, step=0.1) / 100
+n = st.sidebar.number_input("Έτη Συσσώρευσης (μέχρι την ανάγκη)", min_value=1, value=35, step=1)
+r_acc = st.sidebar.number_input("Απόδοση κατά τη Φάση Συσσώρευσης (%)", min_value=0.0, value=5.0, step=0.1) / 100
+r_ret = st.sidebar.number_input("Απόδοση κατά τη Φάση Συνταξιοδότησης (%)", min_value=0.0, value=0.0, step=0.1) / 100
+i = st.sidebar.number_input("Εκτιμώμενος Πληθωρισμός (%)", min_value=0.0, value=3.0, step=0.1) / 100
 
 st.sidebar.subheader("2. Μελλοντικός Στόχος")
 target_type = st.sidebar.radio("Πώς θα χρειαστεί το κεφάλαιο;", ("Εφάπαξ", "Μηνιαίες Δόσεις", "Μικτό (Εφάπαξ & Δόσεις)"))
@@ -37,7 +38,7 @@ if target_type == "Εφάπαξ":
     target_today = st.sidebar.number_input("Επιθυμητό Εφάπαξ (σε ΣΗΜΕΡΙΝΗ αξία €)", min_value=0.0, value=50000.0, step=5000.0)
     m = 0
 elif target_type == "Μηνιαίες Δόσεις":
-    monthly_income = st.sidebar.number_input("Επιθυμητό Μηνιαίο Εισόδημα (σε ΣΗΜΕΡΙΝΗ αξία €)", min_value=0.0, value=1000.0, step=100.0)
+    monthly_income = st.sidebar.number_input("Επιθυμητό Μηνιαίο Εισόδημα (σε ΣΗΜΕΡΙΝΗ αξία €)", min_value=0.0, value=1500.0, step=100.0)
     m = st.sidebar.number_input("Για πόσα έτη θα λαμβάνει εισόδημα;", min_value=1, value=20, step=1)
 else: # Μικτό
     initial_lump_sum = st.sidebar.number_input("Αρχικό Εφάπαξ στη Λήξη (€ Σήμερα)", min_value=0.0, value=15000.0, step=1000.0)
@@ -48,10 +49,7 @@ else: # Μικτό
 st.sidebar.subheader("3. Ευελιξία & Τακτικές Καταβολές")
 g = st.sidebar.number_input("Ετήσια Αύξηση Δόσης / Step-up (%)", min_value=0.0, value=0.0, step=0.5) / 100
 
-# --- ΕΚΤΑΚΤΕΣ ΚΑΤΑΒΟΛΕΣ ---
 st.subheader("💡 Έκτακτες Καταβολές (Προαιρετικό)")
-st.write("Συμπληρώστε αν περιμένετε να έχετε κάποια έκτακτη εισροή χρημάτων σε συγκεκριμένα έτη (π.χ. bonus, πώληση ακινήτου, ακανόνιστα έσοδα).")
-
 df_extra_init = pd.DataFrame({
     "Έτος": list(range(1, int(n) + 1)),
     "Έκτακτη Καταβολή (€)": [0.0] * int(n)
@@ -68,45 +66,43 @@ edited_df = st.data_editor(
 )
 
 # --- ΑΝΑΛΟΓΙΣΤΙΚΗ ΜΗΧΑΝΗ (ΥΠΟΛΟΓΙΣΜΟΙ) ---
-r_real = ((1 + r) / (1 + i)) - 1
-
 if target_type == "Εφάπαξ":
     target_fv = target_today * ((1 + i) ** n)
 elif target_type == "Μηνιαίες Δόσεις":
     annual_need_today = monthly_income * 12
-    if r_real == 0:
-        target_fv_real = annual_need_today * m
+    C1 = annual_need_today * ((1 + i) ** n)
+    if r_ret == i:
+        target_fv = C1 * m
     else:
-        target_fv_real = annual_need_today * ((1 - (1 + r_real)**(-m)) / r_real)
-    target_fv = target_fv_real * ((1 + i) ** n)
-else:
+        target_fv = C1 * (1 - ((1 + i) / (1 + r_ret)) ** m) / (r_ret - i)
+else: # Μικτό
     fv_initial_lump = initial_lump_sum * ((1 + i) ** n)
     annual_need_today = annual_lump_sum + (monthly_income * 12)
-    if r_real == 0:
-        pv_annuity_real = annual_need_today * m
+    C1 = annual_need_today * ((1 + i) ** n)
+    if r_ret == i:
+        fv_annuity = C1 * m
     else:
-        pv_annuity_real = annual_need_today * ((1 - (1 + r_real)**(-m)) / r_real)
-    fv_annuity = pv_annuity_real * ((1 + i) ** n)
+        fv_annuity = C1 * (1 - ((1 + i) / (1 + r_ret)) ** m) / (r_ret - i)
     target_fv = fv_initial_lump + fv_annuity
 
-fv_pv = PV * ((1 + r) ** n)
+fv_pv = PV * ((1 + r_acc) ** n)
 
 fv_extra = 0.0
 for index, row in edited_df.iterrows():
     year = row["Έτος"]
     extra_amount = row["Έκτακτη Καταβολή (€)"]
     if extra_amount > 0:
-        fv_extra += extra_amount * ((1 + r) ** (n - year))
+        fv_extra += extra_amount * ((1 + r_acc) ** (n - year))
 
 shortfall = target_fv - fv_pv - fv_extra
 
 if shortfall <= 0:
     pmt = 0.0
 else:
-    if r == g:
-        pmt = shortfall / (n * ((1 + r)**(n-1)))
+    if r_acc == g:
+        pmt = shortfall / (n * ((1 + r_acc)**(n-1)))
     else:
-        pmt = shortfall / ((( (1 + r)**n ) - ( (1 + g)**n )) / (r - g))
+        pmt = shortfall / ((( (1 + r_acc)**n ) - ( (1 + g)**n )) / (r_acc - g))
 
 years = list(range(1, int(n) + 1))
 balance = [PV]
@@ -119,12 +115,12 @@ for year_idx in range(int(n)):
     regular_contributions.append(reg_contrib)
     ext_contrib = extra_contributions[year_idx]
     
-    new_balance = (balance[-1] + reg_contrib) * (1 + r) + ext_contrib
+    new_balance = (balance[-1] + reg_contrib) * (1 + r_acc) + ext_contrib
     balance.append(new_balance)
     
     current_pmt = current_pmt * (1 + g)
 
-balance = balance[1:]
+balance = balance[1:] # Αφαίρεση έτους 0
 
 # --- ΕΜΦΑΝΙΣΗ ΑΠΟΤΕΛΕΣΜΑΤΩΝ ---
 st.markdown("---")
