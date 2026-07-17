@@ -10,7 +10,7 @@ def format_gr(number):
     s = f"{number:,.2f}"
     return s.replace(',', 'X').replace('.', ',').replace('X', '.')
 
-# Συνάρτηση για μετατροπή εικόνας σε base64 (για την ενσωμάτωση λογοτύπου στο Report)
+# Συνάρτηση για μετατροπή εικόνας σε base64
 def get_base64_image(image_path):
     if os.path.exists(image_path):
         with open(image_path, "rb") as img_file:
@@ -19,38 +19,37 @@ def get_base64_image(image_path):
 
 st.set_page_config(page_title="Strategic Financial Planning", page_icon="📈", layout="wide")
 
+# CSS: Αφαιρέσαμε το background του λογοτύπου στη sidebar, το λογότυπο πάει κεντρικά
 st.markdown("""
     <style>
     .main {background-color: #f9f9fb;}
-    h1 {color: #1E3A8A;}
+    h1 {color: #1E3A8A; margin-bottom: 0rem;}
     .stButton>button {background-color: #1E3A8A; color: white; width: 100%;}
-    [data-testid="stSidebar"] img {
-        background-color: rgba(255, 255, 255, 0.9);
-        padding: 15px;
-        border-radius: 10px;
-    }
     </style>
     """, unsafe_allow_html=True)
 
-# Φόρτωση Λογοτύπου στο UI & προετοιμασία για το Report
+# Φόρτωση Λογοτύπου (μόνο στο background για τα PDF και την κορυφή, όχι στη sidebar)
 logo_b64 = ""
 if os.path.exists("logo.png"):
-    st.sidebar.image("logo.png", use_container_width=True)
     logo_b64 = get_base64_image("logo.png")
 elif os.path.exists("logo.jpg"):
-    st.sidebar.image("logo.jpg", use_container_width=True)
     logo_b64 = get_base64_image("logo.jpg")
-
-logo_html = f'<img src="data:image/png;base64,{logo_b64}" style="max-height: 90px;">' if logo_b64 else '<h2>Strategic Financial Planning</h2>'
 
 # --- SIDEBAR: ΚΕΝΤΡΟ ΕΛΕΓΧΟΥ ---
 st.sidebar.header("Κέντρο Ελέγχου Multi-Goal")
+client_name = st.sidebar.text_input("Ονοματεπώνυμο Πελάτη", placeholder="π.χ. Ιωάννης Παπαδόπουλος")
 total_capital = st.sidebar.number_input("Συνολικό Διαθέσιμο Κεφάλαιο Σήμερα (€)", min_value=0.0, value=25000.0, step=1000.0)
 num_goals = st.sidebar.number_input("Αριθμός Στόχων", min_value=1, max_value=10, value=2, step=1)
 
-# --- MAIN PAGE ---
-st.title("📈 Στρατηγικός Οικονομικός Σχεδιασμός")
-st.markdown("Multi-Goal Financial Planning Management")
+# --- MAIN PAGE: Header με Marketing Placement του Λογοτύπου ---
+col_title, col_logo = st.columns([4, 1])
+with col_title:
+    st.title("📈 Στρατηγικός Οικονομικός Σχεδιασμός")
+    st.markdown("Multi-Goal Financial Planning Management")
+with col_logo:
+    if logo_b64:
+        # Το λογότυπο μπαίνει δεξιά, μεγάλο και καθαρό, πάνω στο λευκό/γκρι φόντο του main page
+        st.markdown(f'<div style="text-align: right;"><img src="data:image/png;base64,{logo_b64}" style="max-width: 180px;"></div>', unsafe_allow_html=True)
 st.markdown("---")
 
 tab_names = [f"Στόχος {i+1}" for i in range(num_goals)] + ["📊 Master Dashboard"]
@@ -60,7 +59,7 @@ all_results = []
 total_allocated = 0.0
 max_years = 0
 
-# Πρώτο πέρασμα για να υπολογίσουμε το συνολικό δεσμευμένο κεφάλαιο (για τον έλεγχο υπέρβασης)
+# Έλεγχος Υπέρβασης
 allocated_list = []
 for i in range(num_goals):
     alloc = st.session_state.get(f"pv_{i}", 0.0)
@@ -70,12 +69,12 @@ temp_total_allocated = sum(allocated_list)
 
 if temp_total_allocated > total_capital:
     excess = temp_total_allocated - total_capital
-    st.sidebar.error(f"🚨 **Υπέρβαση Κεφαλαίου!**\n\nΈχετε δεσμεύσει συνολικά **{format_gr(temp_total_allocated)} €**.\n\nΤο μέγιστο κεφάλαιο που μπορείτε να κατανείμετε είναι **{format_gr(total_capital)} €**.\n\nΠρέπει να μειώσετε τις δεσμεύσεις σας κατά **{format_gr(excess)} €**.")
+    st.sidebar.error(f"🚨 **Υπέρβαση Κεφαλαίου!**\n\nΈχετε δεσμεύσει **{format_gr(temp_total_allocated)} €**.\nΤο μέγιστο διαθέσιμο είναι **{format_gr(total_capital)} €**.\n\nΜειώστε κατά **{format_gr(excess)} €**.")
 else:
     remaining = total_capital - temp_total_allocated
-    st.sidebar.info(f"💡 Υπολειπόμενο διαθέσιμο κεφάλαιο προς κατανομή: **{format_gr(remaining)} €**")
+    st.sidebar.info(f"💡 Υπολειπόμενο προς κατανομή: **{format_gr(remaining)} €**")
 
-# Επίλυση για κάθε Στόχο
+# Επίλυση Στόχων
 for i in range(num_goals):
     with tabs[i]:
         st.header(f"Ρυθμίσεις Στόχου {i+1}")
@@ -90,7 +89,7 @@ for i in range(num_goals):
         env1, env2, env3, env4 = st.columns(4)
         n = env1.number_input("Έτη Συσσώρευσης", 1, 60, 18 if i==0 else 30, key=f"n_{i}")
         r_acc = env2.number_input("Απόδοση Συσσώρευσης (%)", 0.0, 20.0, 5.0, key=f"r_acc_{i}") / 100
-        r_ret = env3.number_input("Απόδοση Διατήρησης (μετά τη λήξη) (%)", 0.0, 20.0, 0.0, key=f"r_ret_{i}") / 100
+        r_ret = env3.number_input("Απόδοση Διατήρησης (%)", 0.0, 20.0, 0.0, key=f"r_ret_{i}") / 100
         inf = env4.number_input("Πληθωρισμός (%)", 0.0, 20.0, 3.0, key=f"inf_{i}") / 100
         
         if n > max_years:
@@ -106,16 +105,16 @@ for i in range(num_goals):
         annual_lump_sum = 0
         
         if target_type == "Εφάπαξ":
-            target_today = st.number_input("Επιθυμητό Εφάπαξ στη Λήξη (Με Σημερινή Αξία €)", 0.0, 10000000.0, 50000.0, key=f"tt_{i}")
+            target_today = st.number_input("Επιθυμητό Εφάπαξ στη Λήξη (Σημερινή Αξία €)", 0.0, 10000000.0, 50000.0, key=f"tt_{i}")
         elif target_type == "Μηνιαίες Δόσεις":
             col_t1, col_t2 = st.columns(2)
-            monthly_income = col_t1.number_input("Επιθυμητό Μηνιαίο Εισόδημα στη Λήξη (Με Σημερινή Αξία €)", 0.0, 50000.0, 1500.0, key=f"mi_{i}")
+            monthly_income = col_t1.number_input("Επιθυμητό Μηνιαίο Εισόδημα στη Λήξη (Σημερινή Αξία €)", 0.0, 50000.0, 1500.0, key=f"mi_{i}")
             m = col_t2.number_input("Έτη Εισοδήματος", 1, 50, 20, key=f"m_{i}")
         else:
             col_t1, col_t2, col_t3, col_t4 = st.columns(4)
-            initial_lump_sum = col_t1.number_input("Επιθυμητό Αρχικό Εφάπαξ στη Λήξη (Με Σημερινή Αξία €)", 0.0, 5000000.0, 15000.0, key=f"ils_{i}")
-            annual_lump_sum = col_t2.number_input("Επιθυμητό Επαναλαμβανόμενο/Ετήσιο Εφάπαξ μετά το 1ο Έτος (Με Σημερινή Αξία €)", 0.0, 1000000.0, 5000.0, key=f"als_{i}")
-            monthly_income = col_t3.number_input("Επιθυμητό Μηνιαίο Εισόδημα στη Λήξη (Με Σημερινή Αξία €)", 0.0, 50000.0, 500.0, key=f"mi2_{i}")
+            initial_lump_sum = col_t1.number_input("Αρχικό Εφάπαξ στη Λήξη (Σημερινή Αξία €)", 0.0, 5000000.0, 15000.0, key=f"ils_{i}")
+            annual_lump_sum = col_t2.number_input("Ετήσιο Εφάπαξ μετά το 1ο Έτος (Σημερινή Αξία €)", 0.0, 1000000.0, 5000.0, key=f"als_{i}")
+            monthly_income = col_t3.number_input("Μηνιαίο Εισόδημα στη Λήξη (Σημερινή Αξία €)", 0.0, 50000.0, 500.0, key=f"mi2_{i}")
             m = col_t4.number_input("Έτη Δόσεων", 1, 50, 4, key=f"m2_{i}")
             
         st.subheader("3. Ευελιξία & Έκτακτες Καταβολές")
@@ -125,7 +124,7 @@ for i in range(num_goals):
         df_extra_init = pd.DataFrame({"Έτος": list(range(1, int(n) + 1)), "Έκτακτη (€)": [0.0] * int(n)})
         edited_df = flex2.data_editor(df_extra_init, hide_index=True, use_container_width=True, key=f"df_{i}")
         
-        # --- ΑΝΑΛΟΓΙΣΤΙΚΗ ΜΗΧΑΝΗ ---
+        # Υπολογισμοί
         if target_type == "Εφάπαξ":
             target_fv = target_today * ((1 + inf) ** n)
         elif target_type == "Μηνιαίες Δόσεις":
@@ -184,7 +183,6 @@ for i in range(num_goals):
             
         balance = balance[1:]
         
-        # Αποθήκευση όλων των παραμέτρων για το Αναλυτικό Report
         all_results.append({
             "name": goal_name,
             "n": int(n),
@@ -208,7 +206,7 @@ for i in range(num_goals):
                 st.subheader(f"€ {format_gr(target_fv)}")
         with c2:
             with st.container(border=True):
-                st.caption("⚡ Απαιτούμενο Επιπλέον Εφάπαξ Κεφάλαιο προς Επένδυση Σήμερα")
+                st.caption("⚡ Απαιτούμενο Επιπλέον Εφάπαξ Κεφάλαιο Σήμερα")
                 if shortfall <= 0:
                     st.subheader("€ 0,00")
                 else:
@@ -222,7 +220,7 @@ for i in range(num_goals):
                     st.subheader(f"€ {format_gr(pmt)}")
         with c4:
             with st.container(border=True):
-                st.caption("💰 Συνολικό Κεφάλαιο στη Λήξη (με το πλάνο επένδυσης)")
+                st.caption("💰 Συνολικό Κεφάλαιο στη Λήξη")
                 st.subheader(f"€ {format_gr(balance[-1])}")
                 st.write(f"*(Σημερινή Αξία: € {format_gr(balance[-1] / ((1 + inf)**n))})*")
                 
@@ -241,7 +239,7 @@ with tabs[-1]:
     total_lump_required = sum([r["lump_today"] for r in all_results])
     
     if unallocated < 0:
-        st.error(f"🚨 Έχετε υπερβεί το συνολικό διαθέσιμο κεφάλαιο κατά {format_gr(abs(unallocated))} €. Παρακαλώ αναπροσαρμόστε τις δεσμεύσεις στους Στόχους.")
+        st.error(f"🚨 **Υπέρβαση Κεφαλαίου!** Έχετε υπερβεί το συνολικό διαθέσιμο κεφάλαιο κατά **{format_gr(abs(unallocated))} €**. Το μέγιστο που μπορείτε να χρησιμοποιήσετε είναι **{format_gr(total_capital)} €**.")
     
     mc1, mc2, mc3 = st.columns(3)
     with mc1:
@@ -257,7 +255,7 @@ with tabs[-1]:
                 st.subheader(f"€ {format_gr(unallocated)}")
     with mc3:
         with st.container(border=True):
-            st.caption("🚨 Συνολικό Εφάπαξ Κενό Σήμερα (Κεφάλαιο που απαιτείται σήμερα για την επίτευξη του συνόλου των στόχων)")
+            st.caption("🚨 Συνολικό Εφάπαξ Κενό Σήμερα")
             st.subheader(f"€ {format_gr(total_lump_required)}")
             
     st.markdown("### 📋 Συγκεντρωτικός Πίνακας Ταμειακών Ροών")
@@ -278,7 +276,6 @@ with tabs[-1]:
                 master_reg[y] += res["reg"][y]
                 master_ext[y] += res["ext"][y]
         
-        # Αλγόριθμος Ομαδοποίησης Ταμειακών Ροών (Run-Length Encoding)
         current_val = master_reg[0] + master_ext[0]
         start_y = 1
         for y in range(1, max_years):
@@ -313,11 +310,17 @@ with tabs[-1]:
         st.markdown("---")
         st.markdown("### 📄 Επιλογές Εξαγωγής")
         
-        col_export1, col_export2 = st.columns(2)
-        
-        # 1. Παραγωγή Σύντομου HTML
+        # HTML Assets
         html_list_items = "".join([f"<li>{t.replace('**', '<b>').replace('**', '</b>')}</li>" for t in grouped_text])
+        logo_html = f'<img src="data:image/png;base64,{logo_b64}" style="max-height: 90px;">' if logo_b64 else ''
+        client_html_block = f"<h2 style='color: #1E3A8A; background: #eef2f7; padding: 10px; border-radius: 5px;'>Στοιχεία Πελάτη: {client_name}</h2>" if client_name.strip() else ""
         
+        # Ορισμός Δυναμικού Ονόματος Αρχείου
+        safe_client_name = f"_{client_name.strip().replace(' ', '_')}" if client_name.strip() else ""
+        file_name_short = f"Financial_Plan_Short{safe_client_name}.html"
+        file_name_detailed = f"Financial_Plan_Detailed{safe_client_name}.html"
+
+        # 1. Παραγωγή Σύντομου HTML
         goals_short_html = ""
         for res in all_results:
             goals_short_html += f"""
@@ -345,7 +348,12 @@ with tabs[-1]:
             </style>
         </head>
         <body>
-            <h1>Στρατηγικός Οικονομικός Σχεδιασμός</h1>
+            <div style="text-align: center; margin-bottom: 20px;">
+                {logo_html}
+            </div>
+            
+            <h1>Συνοπτικός Οικονομικός Σχεδιασμός</h1>
+            {client_html_block}
             
             <div class="summary-box">
                 <h2>Γενική Σύνοψη</h2>
@@ -370,9 +378,7 @@ with tabs[-1]:
         </html>
         """
         
-        # 2. Παραγωγή Αναλυτικού HTML
-        master_chart_html = fig_master.to_html(full_html=False, include_plotlyjs='cdn')
-        
+        # 2. Παραγωγή Αναλυτικού HTML (Αφαιρέθηκε το γράφημα για τέλειο Print σε PDF)
         detailed_goals_html = ""
         for res in all_results:
             detailed_goals_html += f"""
@@ -404,7 +410,7 @@ with tabs[-1]:
         <html>
         <head>
             <meta charset="utf-8">
-            <title>Αναλυτικό Οικονομικό Πλάνο - Strategic Financial Planning</title>
+            <title>Αναλυτικό Οικονομικό Πλάνο</title>
             <style>
                 body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; padding: 40px; max-width: 1000px; margin: 0 auto; }}
                 h1 {{ color: #1E3A8A; border-bottom: 2px solid #FF9F1C; padding-bottom: 10px; margin-top: 20px; }}
@@ -421,6 +427,7 @@ with tabs[-1]:
             </div>
             
             <h1>Αναλυτικό Στρατηγικό Οικονομικό Πλάνο</h1>
+            {client_html_block}
             
             <div class="summary-box">
                 <h2>Γενική Σύνοψη Χαρτοφυλακίου</h2>
@@ -437,11 +444,6 @@ with tabs[-1]:
                 {html_list_items}
             </ul>
             
-            <h2>Γράφημα Συνολικών Απαιτήσεων</h2>
-            <div style="width: 100%; overflow-x: hidden; margin-top: 20px;">
-                {master_chart_html}
-            </div>
-            
             <div class="footer">
                 Δημιουργήθηκε μέσω του Συστήματος Στρατηγικού Οικονομικού Σχεδιασμού.<br>
                 Για να αποθηκεύσετε αυτό το έγγραφο, πατήστε Ctrl+P και επιλέξτε 'Αποθήκευση ως PDF'.
@@ -450,21 +452,21 @@ with tabs[-1]:
         </html>
         """
         
-        # Εμφάνιση Κουμπιών Εξαγωγής
+        col_export1, col_export2 = st.columns(2)
         with col_export1:
             st.download_button(
                 label="📄 Σύντομη Εξαγωγή",
                 data=short_html_content,
-                file_name="Financial_Plan_Short.html",
+                file_name=file_name_short,
                 mime="text/html",
                 use_container_width=True
             )
             
         with col_export2:
             st.download_button(
-                label="📊 Αναλυτική Εξαγωγή (με παραμέτρους & γραφήματα)",
+                label="📊 Αναλυτική Εξαγωγή (χωρίς γράφημα για PDF)",
                 data=detailed_html_content,
-                file_name="Financial_Plan_Detailed.html",
+                file_name=file_name_detailed,
                 mime="text/html",
                 use_container_width=True
             )
