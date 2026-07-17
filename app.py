@@ -3,10 +3,13 @@ import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
 
-# Ρυθμίσεις σελίδας
+# Συνάρτηση για μορφοποίηση στο Ελληνικό πρότυπο (π.χ. 1.500,53)
+def format_gr(number):
+    s = f"{number:,.2f}"
+    return s.replace(',', 'X').replace('.', ',').replace('X', '.')
+
 st.set_page_config(page_title="Financial Planning App", page_icon="📈", layout="wide")
 
-# CSS για Branding (Μπορείς να αλλάξεις χρώματα)
 st.markdown("""
     <style>
     .main {background-color: #f9f9fb;}
@@ -16,116 +19,149 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 st.title("📈 Στρατηγικός Οικονομικός Σχεδιασμός")
-st.markdown("Υπολογισμός Αποταμιευτικού και Επενδυτικού Πλάνου")
+st.markdown("Υπολογισμός Αποταμιευτικού και Επενδυτικού Πλάνου (v2.0)")
 
 # --- SIDEBAR: ΕΙΣΑΓΩΓΗ ΔΕΔΟΜΕΝΩΝ ---
 st.sidebar.header("Παράμετροι Πελάτη")
 
-# 1. Βασικές Παράμετροι
 st.sidebar.subheader("1. Οικονομικό Περιβάλλον & Κεφάλαιο")
 PV = st.sidebar.number_input("Αρχικό Κεφάλαιο Επένδυσης (€)", min_value=0.0, value=10000.0, step=1000.0)
 n = st.sidebar.number_input("Έτη Συσσώρευσης (μέχρι την ανάγκη)", min_value=1, value=15, step=1)
-r = st.sidebar.slider("Εκτιμώμενη Ετήσια Απόδοση (%)", 0.0, 15.0, 5.0) / 100
-i = st.sidebar.slider("Εκτιμώμενος Πληθωρισμός (%)", 0.0, 10.0, 2.0) / 100
+r = st.sidebar.number_input("Εκτιμώμενη Ετήσια Απόδοση (%)", min_value=0.0, value=5.0, step=0.1) / 100
+i = st.sidebar.number_input("Εκτιμώμενος Πληθωρισμός (%)", min_value=0.0, value=2.0, step=0.1) / 100
 
-# 2. Στόχος / Ανάγκη
 st.sidebar.subheader("2. Μελλοντικός Στόχος")
-target_type = st.sidebar.radio("Πώς θα χρειαστεί το κεφάλαιο;", ("Εφάπαξ", "Μηνιαίες Δόσεις (Εισόδημα)"))
+target_type = st.sidebar.radio("Πώς θα χρειαστεί το κεφάλαιο;", ("Εφάπαξ", "Μηνιαίες Δόσεις", "Μικτό (Εφάπαξ & Δόσεις)"))
+
 if target_type == "Εφάπαξ":
     target_today = st.sidebar.number_input("Επιθυμητό Εφάπαξ (σε ΣΗΜΕΡΙΝΗ αξία €)", min_value=0.0, value=50000.0, step=5000.0)
     m = 0
-else:
+elif target_type == "Μηνιαίες Δόσεις":
     monthly_income = st.sidebar.number_input("Επιθυμητό Μηνιαίο Εισόδημα (σε ΣΗΜΕΡΙΝΗ αξία €)", min_value=0.0, value=1000.0, step=100.0)
-    target_today = monthly_income * 12
     m = st.sidebar.number_input("Για πόσα έτη θα λαμβάνει εισόδημα;", min_value=1, value=20, step=1)
+else: # Μικτό
+    initial_lump_sum = st.sidebar.number_input("Αρχικό Εφάπαξ στη Λήξη (€ Σήμερα)", min_value=0.0, value=15000.0, step=1000.0)
+    annual_lump_sum = st.sidebar.number_input("Ετήσιο Εφάπαξ / π.χ. κάθε Σεπτέμβρη (€ Σήμερα)", min_value=0.0, value=0.0, step=1000.0)
+    monthly_income = st.sidebar.number_input("Επιπλέον Μηνιαίο Εισόδημα (€ Σήμερα)", min_value=0.0, value=500.0, step=100.0)
+    m = st.sidebar.number_input("Για πόσα έτη θα λαμβάνει τις δόσεις;", min_value=1, value=4, step=1)
 
-# 3. Σχέδιο Καταβολών
-st.sidebar.subheader("3. Ευελιξία & Καταβολές")
-g = st.sidebar.slider("Ετήσια Αύξηση Δόσης / Step-up (%)", 0.0, 10.0, 0.0) / 100
+st.sidebar.subheader("3. Ευελιξία & Τακτικές Καταβολές")
+g = st.sidebar.number_input("Ετήσια Αύξηση Δόσης / Step-up (%)", min_value=0.0, value=0.0, step=0.5) / 100
 
-st.sidebar.markdown("---")
-st.sidebar.write("💡 *Συμπληρώστε τα πεδία για να δείτε τα αποτελέσματα δεξιά.*")
+# --- ΕΚΤΑΚΤΕΣ ΚΑΤΑΒΟΛΕΣ ---
+st.subheader("💡 Έκτακτες Καταβολές (Προαιρετικό)")
+st.write("Συμπληρώστε αν περιμένετε να έχετε κάποια έκτακτη εισροή χρημάτων σε συγκεκριμένα έτη (π.χ. bonus, πώληση ακινήτου, ακανόνιστα έσοδα).")
+
+df_extra_init = pd.DataFrame({
+    "Έτος": list(range(1, int(n) + 1)),
+    "Έκτακτη Καταβολή (€)": [0.0] * int(n)
+})
+
+edited_df = st.data_editor(
+    df_extra_init,
+    hide_index=True,
+    use_container_width=True,
+    column_config={
+        "Έτος": st.column_config.NumberColumn("Έτος", disabled=True),
+        "Έκτακτη Καταβολή (€)": st.column_config.NumberColumn("Έκτακτη Καταβολή (€)", min_value=0.0, format="€ %d")
+    }
+)
 
 # --- ΑΝΑΛΟΓΙΣΤΙΚΗ ΜΗΧΑΝΗ (ΥΠΟΛΟΓΙΣΜΟΙ) ---
-# Πραγματικό επιτόκιο
 r_real = ((1 + r) / (1 + i)) - 1
 
-# ΦΑΣΗ Α: Υπολογισμός Στόχου (FV) στο τέλος του έτους n
 if target_type == "Εφάπαξ":
     target_fv = target_today * ((1 + i) ** n)
-else:
-    # Παρούσα αξία ράντας στην αρχή της περιόδου συνταξιοδότησης (έτος n), με το πραγματικό επιτόκιο
+elif target_type == "Μηνιαίες Δόσεις":
+    annual_need_today = monthly_income * 12
     if r_real == 0:
-        target_fv_real = target_today * m
+        target_fv_real = annual_need_today * m
     else:
-        target_fv_real = target_today * ((1 - (1 + r_real)**(-m)) / r_real)
-    # Προσαρμογή στον πληθωρισμό της περιόδου συσσώρευσης
+        target_fv_real = annual_need_today * ((1 - (1 + r_real)**(-m)) / r_real)
     target_fv = target_fv_real * ((1 + i) ** n)
+else:
+    fv_initial_lump = initial_lump_sum * ((1 + i) ** n)
+    annual_need_today = annual_lump_sum + (monthly_income * 12)
+    if r_real == 0:
+        pv_annuity_real = annual_need_today * m
+    else:
+        pv_annuity_real = annual_need_today * ((1 - (1 + r_real)**(-m)) / r_real)
+    fv_annuity = pv_annuity_real * ((1 + i) ** n)
+    target_fv = fv_initial_lump + fv_annuity
 
-# ΦΑΣΗ Β: Πορεία Αρχικού Κεφαλαίου
 fv_pv = PV * ((1 + r) ** n)
 
-# ΦΑΣΗ Γ: Επίλυση για την πρώτη ετήσια δόση (PMT)
-shortfall = target_fv - fv_pv
+fv_extra = 0.0
+for index, row in edited_df.iterrows():
+    year = row["Έτος"]
+    extra_amount = row["Έκτακτη Καταβολή (€)"]
+    if extra_amount > 0:
+        fv_extra += extra_amount * ((1 + r) ** (n - year))
+
+shortfall = target_fv - fv_pv - fv_extra
 
 if shortfall <= 0:
     pmt = 0.0
-    st.success("Το αρχικό σας κεφάλαιο επαρκεί για να καλύψει τον στόχο! Δεν απαιτούνται περαιτέρω τακτικές καταβολές.")
 else:
     if r == g:
         pmt = shortfall / (n * ((1 + r)**(n-1)))
     else:
         pmt = shortfall / ((( (1 + r)**n ) - ( (1 + g)**n )) / (r - g))
 
-# Δημιουργία Πίνακα Χρεολυσίας / Εξέλιξης Κεφαλαίου
 years = list(range(1, int(n) + 1))
 balance = [PV]
-contributions = []
+regular_contributions = []
+extra_contributions = edited_df["Έκτακτη Καταβολή (€)"].tolist()
 
 current_pmt = pmt
-for year in years:
-    if current_pmt > 0:
-        contributions.append(current_pmt)
-    else:
-        contributions.append(0)
+for year_idx in range(int(n)):
+    reg_contrib = current_pmt if current_pmt > 0 else 0
+    regular_contributions.append(reg_contrib)
+    ext_contrib = extra_contributions[year_idx]
     
-    # Εξέλιξη: Προηγούμενο υπόλοιπο + απόδοση + νέα καταβολή
-    new_balance = balance[-1] * (1 + r) + current_pmt * (1 + r) # Υποθέτουμε καταβολή στην αρχή του έτους
+    new_balance = (balance[-1] + reg_contrib) * (1 + r) + ext_contrib
     balance.append(new_balance)
     
     current_pmt = current_pmt * (1 + g)
 
-balance = balance[1:] # Αφαιρούμε το έτος 0 για το γράφημα
+balance = balance[1:]
 
 # --- ΕΜΦΑΝΙΣΗ ΑΠΟΤΕΛΕΣΜΑΤΩΝ ---
+st.markdown("---")
 col1, col2, col3 = st.columns(3)
 
 with col1:
     st.info("🎯 Στόχος στη Λήξη (Αναπροσαρμοσμένος)")
-    st.title(f"€ {target_fv:,.0f}")
+    st.title(f"€ {format_gr(target_fv)}")
 
 with col2:
-    st.warning("📥 1η Ετήσια Καταβολή")
-    if pmt > 0:
-        st.title(f"€ {pmt:,.0f}")
-        st.write(f"(ή περίπου € {pmt/12:,.0f} / μήνα)")
+    st.warning("📥 1η Τακτική Ετήσια Καταβολή")
+    if shortfall <= 0:
+        st.title("€ 0,00")
+        st.write("Οι πόροι καλύπτουν τον στόχο!")
     else:
-        st.title("€ 0")
+        st.title(f"€ {format_gr(pmt)}")
+        st.write(f"(ή περίπου € {format_gr(pmt/12)} / μήνα)")
 
 with col3:
     st.success("💰 Συνολικό Κεφάλαιο στη Λήξη")
-    st.title(f"€ {balance[-1]:,.0f}")
+    st.title(f"€ {format_gr(balance[-1])}")
 
-
-# Γράφημα
 st.markdown("### 📊 Εξέλιξη Επένδυσης")
 fig = go.Figure()
 
 fig.add_trace(go.Bar(
     x=years,
-    y=contributions,
-    name='Ετήσια Καταβολή',
+    y=regular_contributions,
+    name='Τακτική Ετήσια Καταβολή',
     marker_color='#FF9F1C'
+))
+
+fig.add_trace(go.Bar(
+    x=years,
+    y=extra_contributions,
+    name='Έκτακτη Καταβολή',
+    marker_color='#2A9D8F'
 ))
 
 fig.add_trace(go.Scatter(
@@ -141,12 +177,9 @@ fig.update_layout(
     xaxis_title="Έτη Επένδυσης",
     yaxis_title="Ποσό (€)",
     hovermode="x unified",
-    barmode='overlay',
+    barmode='stack',
     plot_bgcolor='rgba(0,0,0,0)'
 )
 fig.update_yaxes(showgrid=True, gridwidth=1, gridcolor='LightGray')
 
 st.plotly_chart(fig, use_container_width=True)
-
-st.markdown("---")
-st.caption("Developed for professional financial planning. All calculations are projections based on the provided inputs.")
