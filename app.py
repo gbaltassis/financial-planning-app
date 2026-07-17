@@ -186,7 +186,7 @@ for i in range(num_goals):
                 st.subheader(f"€ {format_gr(target_fv)}")
         with c2:
             with st.container(border=True):
-                st.caption("⚡ Απαιτούμενο Εφάπαξ Κεφάλαιο προς Επένδυση Σήμερα")
+                st.caption("⚡ Απαιτούμενο Επιπλέον Εφάπαξ Κεφάλαιο προς Επένδυση Σήμερα")
                 if shortfall <= 0:
                     st.subheader("€ 0,00")
                 else:
