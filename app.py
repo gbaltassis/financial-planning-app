@@ -69,7 +69,11 @@ for i in range(num_goals):
 temp_total_allocated = sum(allocated_list)
 
 if temp_total_allocated > total_capital:
-    st.sidebar.error(f"🚨 Υπέρβαση Κεφαλαίου! Έχετε δεσμεύσει {format_gr(temp_total_allocated)}€ από τα {format_gr(total_capital)}€ διαθέσιμα.")
+    excess = temp_total_allocated - total_capital
+    st.sidebar.error(f"🚨 **Υπέρβαση Κεφαλαίου!**\n\nΈχετε δεσμεύσει συνολικά **{format_gr(temp_total_allocated)} €**.\n\nΤο μέγιστο κεφάλαιο που μπορείτε να κατανείμετε είναι **{format_gr(total_capital)} €**.\n\nΠρέπει να μειώσετε τις δεσμεύσεις σας κατά **{format_gr(excess)} €**.")
+else:
+    remaining = total_capital - temp_total_allocated
+    st.sidebar.info(f"💡 Υπολειπόμενο διαθέσιμο κεφάλαιο προς κατανομή: **{format_gr(remaining)} €**")
 
 # Επίλυση για κάθε Στόχο
 for i in range(num_goals):
