@@ -10,13 +10,20 @@ def format_gr(number):
     s = f"{number:,.2f}"
     return s.replace(',', 'X').replace('.', ',').replace('X', '.')
 
+# Συνάρτηση για μετατροπή εικόνας σε base64 (για την ενσωμάτωση λογοτύπου στο Report)
+def get_base64_image(image_path):
+    if os.path.exists(image_path):
+        with open(image_path, "rb") as img_file:
+            return base64.b64encode(img_file.read()).decode()
+    return ""
+
 st.set_page_config(page_title="Strategic Financial Planning", page_icon="📈", layout="wide")
 
 st.markdown("""
     <style>
     .main {background-color: #f9f9fb;}
     h1 {color: #1E3A8A;}
-    .stButton>button {background-color: #1E3A8A; color: white;}
+    .stButton>button {background-color: #1E3A8A; color: white; width: 100%;}
     [data-testid="stSidebar"] img {
         background-color: rgba(255, 255, 255, 0.9);
         padding: 15px;
@@ -25,11 +32,16 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# Φόρτωση Λογοτύπου
+# Φόρτωση Λογοτύπου στο UI & προετοιμασία για το Report
+logo_b64 = ""
 if os.path.exists("logo.png"):
     st.sidebar.image("logo.png", use_container_width=True)
+    logo_b64 = get_base64_image("logo.png")
 elif os.path.exists("logo.jpg"):
     st.sidebar.image("logo.jpg", use_container_width=True)
+    logo_b64 = get_base64_image("logo.jpg")
+
+logo_html = f'<img src="data:image/png;base64,{logo_b64}" style="max-height: 90px;">' if logo_b64 else '<h2>Strategic Financial Planning</h2>'
 
 # --- SIDEBAR: ΚΕΝΤΡΟ ΕΛΕΓΧΟΥ ---
 st.sidebar.header("Κέντρο Ελέγχου Multi-Goal")
@@ -168,9 +180,15 @@ for i in range(num_goals):
             
         balance = balance[1:]
         
+        # Αποθήκευση όλων των παραμέτρων για το Αναλυτικό Report
         all_results.append({
             "name": goal_name,
             "n": int(n),
+            "r_acc": r_acc,
+            "r_ret": r_ret,
+            "inf": inf,
+            "g": g,
+            "target_type": target_type,
             "reg": reg_contribs,
             "ext": ext_contribs,
             "lump_today": lump_sum_today,
@@ -261,7 +279,6 @@ with tabs[-1]:
         start_y = 1
         for y in range(1, max_years):
             val = master_reg[y] + master_ext[y]
-            # Συγκρίνουμε με 2 δεκαδικά ψηφία για να αποφύγουμε σφάλματα στρογγυλοποίησης της Python
             if round(val, 2) != round(current_val, 2):
                 end_y = y
                 if start_y == end_y:
@@ -271,7 +288,6 @@ with tabs[-1]:
                 start_y = y + 1
                 current_val = val
         
-        # Προσθήκη του τελευταίου block
         end_y = max_years
         if start_y == end_y:
             grouped_text.append(f"**Έτος {start_y}:** {format_gr(current_val)} €")
@@ -289,12 +305,18 @@ with tabs[-1]:
         fig_master.update_layout(xaxis_title="Έτος Σχεδιασμού", yaxis_title="Συνολικό Απαιτούμενο Ποσό (€)", barmode='stack', hovermode="x unified", plot_bgcolor='rgba(0,0,0,0)')
         st.plotly_chart(fig_master, use_container_width=True)
 
-        # --- ΠΑΡΑΓΩΓΗ HTML ΑΝΑΦΟΡΑΣ ΓΙΑ ΕΚΤΥΠΩΣΗ ΣΕ PDF ---
+        # --- ΕΞΑΓΩΓΕΣ (PDF) ---
+        st.markdown("---")
+        st.markdown("### 📄 Επιλογές Εξαγωγής")
+        
+        col_export1, col_export2 = st.columns(2)
+        
+        # 1. Παραγωγή Σύντομου HTML
         html_list_items = "".join([f"<li>{t.replace('**', '<b>').replace('**', '</b>')}</li>" for t in grouped_text])
         
-        goals_html = ""
-        for idx, res in enumerate(all_results):
-            goals_html += f"""
+        goals_short_html = ""
+        for res in all_results:
+            goals_short_html += f"""
             <div style='background: #f4f6f9; padding: 15px; margin-bottom: 10px; border-radius: 8px;'>
                 <h3 style='margin-top: 0; color: #1E3A8A;'>{res['name']}</h3>
                 <p><b>Διάρκεια:</b> {res['n']} έτη</p>
@@ -303,11 +325,11 @@ with tabs[-1]:
             </div>
             """
 
-        html_content = f"""
+        short_html_content = f"""
         <html>
         <head>
             <meta charset="utf-8">
-            <title>Οικονομικό Πλάνο - Strategic Financial Planning</title>
+            <title>Συνοπτικό Οικονομικό Πλάνο</title>
             <style>
                 body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; padding: 40px; max-width: 900px; margin: 0 auto; }}
                 h1 {{ color: #1E3A8A; border-bottom: 2px solid #FF9F1C; padding-bottom: 10px; }}
@@ -329,7 +351,7 @@ with tabs[-1]:
             </div>
 
             <h2>Ανάλυση Στόχων</h2>
-            {goals_html}
+            {goals_short_html}
 
             <h2>Συγκεντρωτικό Πλάνο Ταμειακών Ροών</h2>
             <ul>
@@ -344,10 +366,101 @@ with tabs[-1]:
         </html>
         """
         
-        st.markdown("---")
-        st.download_button(
-            label="📄 Εξαγωγή Αναφοράς (για Εκτύπωση σε PDF)",
-            data=html_content,
-            file_name="Financial_Plan_Report.html",
-            mime="text/html"
-        )
+        # 2. Παραγωγή Αναλυτικού HTML
+        master_chart_html = fig_master.to_html(full_html=False, include_plotlyjs='cdn')
+        
+        detailed_goals_html = ""
+        for res in all_results:
+            detailed_goals_html += f"""
+            <div style='background: #f4f6f9; padding: 20px; margin-bottom: 15px; border-radius: 8px; border-left: 6px solid #1E3A8A;'>
+                <h3 style='margin-top: 0; color: #1E3A8A; font-size: 22px;'>{res['name']}</h3>
+                <table style='width: 100%; border-collapse: collapse; margin-bottom: 15px;'>
+                    <tr>
+                        <td style='padding: 5px;'><b>Έτη Συσσώρευσης:</b> {res['n']}</td>
+                        <td style='padding: 5px;'><b>Απόδοση Συσσώρευσης:</b> {res['r_acc']*100:.2f}%</td>
+                    </tr>
+                    <tr>
+                        <td style='padding: 5px;'><b>Απόδοση Διατήρησης:</b> {res['r_ret']*100:.2f}%</td>
+                        <td style='padding: 5px;'><b>Πληθωρισμός:</b> {res['inf']*100:.2f}%</td>
+                    </tr>
+                    <tr>
+                        <td style='padding: 5px;'><b>Ετήσια Αύξηση Δόσης (Step-up):</b> {res['g']*100:.2f}%</td>
+                        <td style='padding: 5px;'><b>Τύπος Στόχου:</b> {res['target_type']}</td>
+                    </tr>
+                </table>
+                <div style='border-top: 1px solid #ddd; padding-top: 10px;'>
+                    <p><b>Στόχος στη Λήξη (Αναπροσαρμοσμένος):</b> {format_gr(res['target_fv'])} €</p>
+                    <p><b>Απαιτούμενο Επιπλέον Εφάπαξ Σήμερα:</b> {format_gr(res['lump_today'])} €</p>
+                    <p><b>Συνολικό Κεφάλαιο στη Λήξη:</b> {format_gr(res['balance_final'])} €</p>
+                </div>
+            </div>
+            """
+
+        detailed_html_content = f"""
+        <html>
+        <head>
+            <meta charset="utf-8">
+            <title>Αναλυτικό Οικονομικό Πλάνο - Strategic Financial Planning</title>
+            <style>
+                body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; padding: 40px; max-width: 1000px; margin: 0 auto; }}
+                h1 {{ color: #1E3A8A; border-bottom: 2px solid #FF9F1C; padding-bottom: 10px; margin-top: 20px; }}
+                h2 {{ color: #2A9D8F; margin-top: 30px; border-bottom: 1px solid #eee; padding-bottom: 5px; }}
+                .summary-box {{ border: 2px solid #1E3A8A; padding: 20px; border-radius: 10px; margin-bottom: 30px; background-color: #fff; }}
+                ul {{ background: #f9f9fb; padding: 20px 40px; border-radius: 8px; border-left: 5px solid #FF9F1C; }}
+                li {{ margin-bottom: 10px; font-size: 16px; }}
+                .footer {{ margin-top: 50px; font-size: 12px; color: #777; text-align: center; border-top: 1px solid #ddd; padding-top: 20px; }}
+            </style>
+        </head>
+        <body>
+            <div style="text-align: center; margin-bottom: 20px;">
+                {logo_html}
+            </div>
+            
+            <h1>Αναλυτικό Στρατηγικό Οικονομικό Πλάνο</h1>
+            
+            <div class="summary-box">
+                <h2>Γενική Σύνοψη Χαρτοφυλακίου</h2>
+                <p><b>Συνολικό Διαθέσιμο Κεφάλαιο Σήμερα:</b> {format_gr(total_capital)} €</p>
+                <p><b>Διαθέσιμο Κεφάλαιο προς Επένδυση (Unallocated):</b> {format_gr(unallocated)} €</p>
+                <p><b>Συνολικό Εφάπαξ Κενό Σήμερα:</b> {format_gr(total_lump_required)} €</p>
+            </div>
+
+            <h2>Αναλυτικές Καρτέλες Στόχων</h2>
+            {detailed_goals_html}
+
+            <h2>Συγκεντρωτικό Πλάνο Ταμειακών Ροών</h2>
+            <ul>
+                {html_list_items}
+            </ul>
+            
+            <h2>Γράφημα Συνολικών Απαιτήσεων</h2>
+            <div style="width: 100%; overflow-x: hidden; margin-top: 20px;">
+                {master_chart_html}
+            </div>
+            
+            <div class="footer">
+                Δημιουργήθηκε μέσω του Συστήματος Στρατηγικού Οικονομικού Σχεδιασμού.<br>
+                Για να αποθηκεύσετε αυτό το έγγραφο, πατήστε Ctrl+P και επιλέξτε 'Αποθήκευση ως PDF'.
+            </div>
+        </body>
+        </html>
+        """
+        
+        # Εμφάνιση Κουμπιών Εξαγωγής
+        with col_export1:
+            st.download_button(
+                label="📄 Σύντομη Εξαγωγή",
+                data=short_html_content,
+                file_name="Financial_Plan_Short.html",
+                mime="text/html",
+                use_container_width=True
+            )
+            
+        with col_export2:
+            st.download_button(
+                label="📊 Αναλυτική Εξαγωγή (με παραμέτρους & γραφήματα)",
+                data=detailed_html_content,
+                file_name="Financial_Plan_Detailed.html",
+                mime="text/html",
+                use_container_width=True
+            )
