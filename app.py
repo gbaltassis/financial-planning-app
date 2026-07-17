@@ -2,8 +2,9 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
+import os
 
-# Συνάρτηση για μορφοποίηση στο Ελληνικό πρότυπο (π.χ. 1.500,53)
+# Συνάρτηση για μορφοποίηση στο Ελληνικό πρότυπο
 def format_gr(number):
     s = f"{number:,.2f}"
     return s.replace(',', 'X').replace('.', ',').replace('X', '.')
@@ -11,18 +12,27 @@ def format_gr(number):
 st.set_page_config(page_title="Financial Planning App", page_icon="📈", layout="wide")
 
 st.markdown("""
-    <style>
-    .main {background-color: #f9f9fb;}
-    h1 {color: #1E3A8A;}
-    .stButton>button {background-color: #1E3A8A; color: white;}
-    </style>
-    """, unsafe_allow_html=True)
-
-st.title("📈 Στρατηγικός Οικονομικός Σχεδιασμός")
-st.markdown("Υπολογισμός Αποταμιευτικού και Επενδυτικού Πλάνου")
+    <style>
+[data-testid="stSidebar"] img {
+    background-color: rgba(255, 255, 255, 0.9);
+    padding: 15px;
+    border-radius: 10px;
+}
+    .main {background-color: #f9f9fb;}
+    h1 {color: #1E3A8A;}
+    .stButton>button {background-color: #1E3A8A; color: white;}
+    </style>
+    """, unsafe_allow_html=True)
 
 # --- SIDEBAR: ΕΙΣΑΓΩΓΗ ΔΕΔΟΜΕΝΩΝ ---
-st.sidebar.header("Παράμετροι Πελάτη")
+
+# Φόρτωση Λογοτύπου (αν υπάρχει στο GitHub)
+if os.path.exists("logo.png"):
+    st.sidebar.image("logo.png", use_container_width=True)
+elif os.path.exists("logo.jpg"):
+    st.sidebar.image("logo.jpg", use_container_width=True)
+
+st.sidebar.header("ΠΑΡΑΜΕΤΡΟΙ ΠΕΛΑΤΗ")
 
 st.sidebar.subheader("1. Οικονομικό Περιβάλλον & Κεφάλαιο")
 PV = st.sidebar.number_input("Αρχικό Κεφάλαιο Επένδυσης (€)", min_value=0.0, value=10000.0, step=1000.0)
@@ -40,7 +50,7 @@ if target_type == "Εφάπαξ":
 elif target_type == "Μηνιαίες Δόσεις":
     monthly_income = st.sidebar.number_input("Επιθυμητό Μηνιαίο Εισόδημα (σε ΣΗΜΕΡΙΝΗ αξία €)", min_value=0.0, value=1500.0, step=100.0)
     m = st.sidebar.number_input("Για πόσα έτη θα λαμβάνει εισόδημα;", min_value=1, value=20, step=1)
-else: # Μικτό
+else:
     initial_lump_sum = st.sidebar.number_input("Αρχικό Εφάπαξ στη Λήξη (σε ΣΗΜΕΡΙΝΗ αξία €)", min_value=0.0, value=15000.0, step=1000.0)
     annual_lump_sum = st.sidebar.number_input("Ετήσιο Εφάπαξ / π.χ. κάθε Σεπτέμβρη (σε ΣΗΜΕΡΙΝΗ αξία €)", min_value=0.0, value=0.0, step=1000.0)
     monthly_income = st.sidebar.number_input("Επιπλέον Μηνιαίο Εισόδημα (σε ΣΗΜΕΡΙΝΗ αξία €)", min_value=0.0, value=500.0, step=100.0)
@@ -49,23 +59,25 @@ else: # Μικτό
 st.sidebar.subheader("3. Ευελιξία & Τακτικές Καταβολές")
 g = st.sidebar.number_input("Ετήσια Αύξηση Δόσης / Step-up (%)", min_value=0.0, value=0.0, step=0.5) / 100
 
-st.subheader("💡 Έκτακτες Καταβολές (Προαιρετικό)")
+st.sidebar.subheader("4. Έκτακτες Καταβολές (Προαιρετικό)")
+st.sidebar.write("Εισαγωγή έκτακτων εισροών ανά έτος.")
 df_extra_init = pd.DataFrame({
     "Έτος": list(range(1, int(n) + 1)),
-    "Έκτακτη Καταβολή (€)": [0.0] * int(n)
+    "Έκτακτη (€)": [0.0] * int(n)
 })
 
-edited_df = st.data_editor(
+edited_df = st.sidebar.data_editor(
     df_extra_init,
     hide_index=True,
     use_container_width=True,
     column_config={
         "Έτος": st.column_config.NumberColumn("Έτος", disabled=True),
-        "Έκτακτη Καταβολή (€)": st.column_config.NumberColumn("Έκτακτη Καταβολή (€)", min_value=0.0, format="€ %d")
+        "Έκτακτη (€)": st.column_config.NumberColumn("Έκτακτη (€)", min_value=0.0, format="€ %d")
     }
 )
 
 # --- ΑΝΑΛΟΓΙΣΤΙΚΗ ΜΗΧΑΝΗ (ΥΠΟΛΟΓΙΣΜΟΙ) ---
+# Φάση Α: Στόχος
 if target_type == "Εφάπαξ":
     target_fv = target_today * ((1 + i) ** n)
 elif target_type == "Μηνιαίες Δόσεις":
@@ -75,7 +87,7 @@ elif target_type == "Μηνιαίες Δόσεις":
         target_fv = C1 * m
     else:
         target_fv = C1 * (1 - ((1 + i) / (1 + r_ret)) ** m) / (r_ret - i)
-else: # Μικτό
+else:
     fv_initial_lump = initial_lump_sum * ((1 + i) ** n)
     annual_need_today = annual_lump_sum + (monthly_income * 12)
     C1 = annual_need_today * ((1 + i) ** n)
@@ -85,29 +97,32 @@ else: # Μικτό
         fv_annuity = C1 * (1 - ((1 + i) / (1 + r_ret)) ** m) / (r_ret - i)
     target_fv = fv_initial_lump + fv_annuity
 
+# Φάση Β: Συσσώρευση 
 fv_pv = PV * ((1 + r_acc) ** n)
 
 fv_extra = 0.0
 for index, row in edited_df.iterrows():
     year = row["Έτος"]
-    extra_amount = row["Έκτακτη Καταβολή (€)"]
+    extra_amount = row["Έκτακτη (€)"]
     if extra_amount > 0:
         fv_extra += extra_amount * ((1 + r_acc) ** (n - year))
 
 shortfall = target_fv - fv_pv - fv_extra
 
+# Διόρθωση: Προκαταβλητέα Ράντα (πολλαπλασιασμός με 1+r_acc)
 if shortfall <= 0:
     pmt = 0.0
 else:
     if r_acc == g:
-        pmt = shortfall / (n * ((1 + r_acc)**(n-1)))
+        pmt = shortfall / (n * ((1 + r_acc)**n))
     else:
-        pmt = shortfall / ((( (1 + r_acc)**n ) - ( (1 + g)**n )) / (r_acc - g))
+        pmt = shortfall / ((((1 + r_acc)**n - (1 + g)**n) / (r_acc - g)) * (1 + r_acc))
 
+# Πίνακας Εξέλιξης
 years = list(range(1, int(n) + 1))
 balance = [PV]
 regular_contributions = []
-extra_contributions = edited_df["Έκτακτη Καταβολή (€)"].tolist()
+extra_contributions = edited_df["Έκτακτη (€)"].tolist()
 
 current_pmt = pmt
 for year_idx in range(int(n)):
@@ -115,33 +130,40 @@ for year_idx in range(int(n)):
     regular_contributions.append(reg_contrib)
     ext_contrib = extra_contributions[year_idx]
     
+    # Η τακτική καταβολή μπαίνει στην αρχή του έτους, η έκτακτη στο τέλος
     new_balance = (balance[-1] + reg_contrib) * (1 + r_acc) + ext_contrib
     balance.append(new_balance)
     
     current_pmt = current_pmt * (1 + g)
 
-balance = balance[1:] # Αφαίρεση έτους 0
+balance = balance[1:] 
 
-# --- ΕΜΦΑΝΙΣΗ ΑΠΟΤΕΛΕΣΜΑΤΩΝ ---
+# --- MAIN PAGE: ΕΜΦΑΝΙΣΗ ΑΠΟΤΕΛΕΣΜΑΤΩΝ ---
+st.title("📈 Στρατηγικός Οικονομικός Σχεδιασμός")
+st.markdown("Υπολογισμός Αποταμιευτικού και Επενδυτικού Πλάνου")
 st.markdown("---")
+
 col1, col2, col3 = st.columns(3)
 
 with col1:
-    st.info("🎯 Στόχος στη Λήξη (Αναπροσαρμοσμένος)")
-    st.title(f"€ {format_gr(target_fv)}")
+    with st.container(border=True):
+        st.info("🎯 Στόχος στη Λήξη (Αναπροσαρμοσμένος)")
+        st.subheader(f"€ {format_gr(target_fv)}")
 
 with col2:
-    st.warning("📥 1η Τακτική Ετήσια Καταβολή")
-    if shortfall <= 0:
-        st.title("€ 0,00")
-        st.write("Οι πόροι καλύπτουν τον στόχο!")
-    else:
-        st.title(f"€ {format_gr(pmt)}")
-        st.write(f"(ή περίπου € {format_gr(pmt/12)} / μήνα)")
+    with st.container(border=True):
+        st.warning("📥 1η Τακτική Ετήσια Καταβολή")
+        if shortfall <= 0:
+            st.subheader("€ 0,00")
+            st.caption("Οι πόροι καλύπτουν τον στόχο!")
+        else:
+            st.subheader(f"€ {format_gr(pmt)}")
+            st.caption(f"(ή περίπου € {format_gr(pmt/12)} / μήνα)")
 
 with col3:
-    st.success("💰 Συνολικό Κεφάλαιο στη Λήξη")
-    st.title(f"€ {format_gr(balance[-1])}")
+    with st.container(border=True):
+        st.success("💰 Συνολικό Κεφάλαιο στη Λήξη")
+        st.subheader(f"€ {format_gr(balance[-1])}")
 
 st.markdown("### 📊 Εξέλιξη Επένδυσης")
 fig = go.Figure()
@@ -174,7 +196,8 @@ fig.update_layout(
     yaxis_title="Ποσό (€)",
     hovermode="x unified",
     barmode='stack',
-    plot_bgcolor='rgba(0,0,0,0)'
+    plot_bgcolor='rgba(0,0,0,0)',
+    margin=dict(l=0, r=0, t=30, b=0)
 )
 fig.update_yaxes(showgrid=True, gridwidth=1, gridcolor='LightGray')
 
