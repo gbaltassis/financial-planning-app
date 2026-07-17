@@ -74,7 +74,7 @@ for i in range(num_goals):
         env1, env2, env3, env4 = st.columns(4)
         n = env1.number_input("Έτη Συσσώρευσης", 1, 60, 18 if i==0 else 30, key=f"n_{i}")
         r_acc = env2.number_input("Απόδοση Συσσώρευσης (%)", 0.0, 20.0, 5.0, key=f"r_acc_{i}") / 100
-        r_ret = env3.number_input("Απόδοση Συνταξ/σης (%)", 0.0, 20.0, 0.0, key=f"r_ret_{i}") / 100
+        r_ret = env3.number_input("Απόδοση Διατήρησης (μετά τη λήξη) (%)", 0.0, 20.0, 0.0, key=f"r_ret_{i}") / 100
         inf = env4.number_input("Πληθωρισμός (%)", 0.0, 20.0, 3.0, key=f"inf_{i}") / 100
         
         if n > max_years:
