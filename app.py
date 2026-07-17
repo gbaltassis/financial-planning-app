@@ -200,7 +200,7 @@ for i in range(num_goals):
                     st.subheader(f"€ {format_gr(pmt)}")
         with c4:
             with st.container(border=True):
-                st.caption("💰 Συνολικό Κεφάλαιο στη Λήξη")
+                st.caption("💰 Συνολικό Κεφάλαιο στη Λήξη (με το πλάνο επένδυσης)")
                 st.subheader(f"€ {format_gr(balance[-1])}")
                 st.write(f"*(Σημερινή Αξία: € {format_gr(balance[-1] / ((1 + inf)**n))})*")
                 
