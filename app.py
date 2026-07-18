@@ -74,7 +74,7 @@ logo_img_tag = f'<img src="data:image/png;base64,{logo_b64}" style="max-height: 
 # --- SIDEBAR: ΚΕΝΤΡΟ ΕΛΕΓΧΟΥ ---
 st.sidebar.header("Κέντρο Ελέγχου Multi-Goal")
 
-client_name = st.sidebar.text_input("Ονοματεπώνυμο Πελάτη", value="")
+client_name = st.sidebar.text_input("Ονοματεπώνυμο Πελάτη", value="", placeholder=f"π.χ. Γιώργος Παπαδόπουλος")
 total_capital = st.sidebar.number_input("Συνολικό Διαθέσιμο Κεφάλαιο Σήμερα (€)", min_value=0.0, value=None, step=1000.0)
 tc_val = total_capital if total_capital is not None else 0.0
 
@@ -129,7 +129,7 @@ for i in range(ng_val):
         goal_name = col_name.text_input("Ονομασία Στόχου", value="", placeholder=f"π.χ. Στόχος {i+1}", key=f"name_{i}")
         goal_name_val = goal_name if goal_name.strip() else f"Στόχος {i+1}"
         
-        allocated_pv = col_alloc.number_input("Δεσμευμένο Κεφάλαιο (από τα διαθέσιμα)", min_value=0.0, value=None, step=1000.0, key=f"pv_{i}")
+        allocated_pv = col_alloc.number_input("Κεφάλαιο που θέλω να δεσμεύσω από τα διαθέσιμα γι'αυτόν τον στόχο", min_value=0.0, value=None, step=1000.0, key=f"pv_{i}")
         alloc_val = allocated_pv if allocated_pv is not None else 0.0
         
         if remaining_global >= 0:
@@ -166,21 +166,21 @@ for i in range(ng_val):
         annual_lump_sum_val = 0.0
         
         if target_type == "Εφάπαξ":
-            tt = st.number_input("Επιθυμητό Εφάπαξ στη Λήξη (Σημερινή Αξία €)", min_value=0.0, max_value=10000000.0, value=None, key=f"tt_{i}")
+            tt = st.number_input("Επιθυμητό Εφάπαξ στη Λήξη (Σε Σημερινή Αξία €)", min_value=0.0, max_value=10000000.0, value=None, key=f"tt_{i}")
             target_today_val = tt if tt is not None else 0.0
         elif target_type == "Μηνιαίες Δόσεις":
             col_t1, col_t2 = st.columns(2)
-            mi = col_t1.number_input("Επιθυμητό Μηνιαίο Εισόδημα (Σημερινή Αξία €)", min_value=0.0, max_value=50000.0, value=None, key=f"mi_{i}")
+            mi = col_t1.number_input("Επιθυμητό Μηνιαίο Εισόδημα (Σε Σημερινή Αξία €)", min_value=0.0, max_value=50000.0, value=None, key=f"mi_{i}")
             monthly_income_val = mi if mi is not None else 0.0
             m = col_t2.number_input("Έτη Εισοδήματος", min_value=1, max_value=50, value=None, key=f"m_{i}")
             m_val = int(m) if m is not None else 0
         else:
             col_t1, col_t2, col_t3, col_t4 = st.columns(4)
-            ils = col_t1.number_input("Επιθυμητό Αρχικό Εφάπαξ (Σημερινή Αξία €)", min_value=0.0, max_value=5000000.0, value=None, key=f"ils_{i}")
+            ils = col_t1.number_input("Επιθυμητό Αρχικό Εφάπαξ (Σε Σημερινή Αξία €)", min_value=0.0, max_value=5000000.0, value=None, key=f"ils_{i}")
             initial_lump_sum_val = ils if ils is not None else 0.0
-            als = col_t2.number_input("Επαναλαμβανόμενο/Ετήσιο Εφάπαξ (Σημερινή Αξία €)", min_value=0.0, max_value=1000000.0, value=None, key=f"als_{i}")
+            als = col_t2.number_input("Επαναλαμβανόμενο/Ετήσιο Εφάπαξ (Σε Σημερινή Αξία €)", min_value=0.0, max_value=1000000.0, value=None, key=f"als_{i}")
             annual_lump_sum_val = als if als is not None else 0.0
-            mi2 = col_t3.number_input("Επιθυμητό Μηνιαίο Εισόδημα (Σημερινή Αξία €)", min_value=0.0, max_value=50000.0, value=None, key=f"mi2_{i}")
+            mi2 = col_t3.number_input("Επιθυμητό Μηνιαίο Εισόδημα (Σε Σημερινή Αξία €)", min_value=0.0, max_value=50000.0, value=None, key=f"mi2_{i}")
             monthly_income_val = mi2 if mi2 is not None else 0.0
             m2 = col_t4.number_input("Έτη Δόσεων", min_value=1, max_value=50, value=None, key=f"m2_{i}")
             m_val = int(m2) if m2 is not None else 0
@@ -344,7 +344,7 @@ with tabs[-1]:
             st.subheader(f"€ {format_gr(tc_val)}")
     with mc2:
         with st.container(border=True):
-            st.caption("⚖️ Υπολοιπόμενο Διαθέσιμο Κεφάλαιο προς Επένδυση (Unallocated)")
+            st.caption("⚖️ Υπολοιπόμενο Διαθέσιμο Κεφάλαιο προς Επένδυση (Unallocated) - Δεν αξιοποιήθηκε για τους στόχους")
             if unallocated < 0:
                 st.error(f"€ {format_gr(unallocated)}")
             else:
