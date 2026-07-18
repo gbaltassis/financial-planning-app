@@ -143,7 +143,7 @@ for i in range(num_goals):
             max_years = int(n)
             
         st.subheader("2. Μελλοντικός Στόχος")
-        target_type = st.radio("Τύπος Στόχου", ("Εφάπαξ", "Μηνιαίες Δόσεις", "Μικτό (Εφάπαξ & Δόσεις)"), key=f"ttype_{i}")
+        target_type = st.radio("Τύπος Στόχου:", ("Εφάπαξ", "Μηνιαίες Δόσεις", "Μικτό (Εφάπαξ & Δόσεις)"), key=f"ttype_{i}")
         
         target_today = 0
         monthly_income = 0
@@ -152,17 +152,17 @@ for i in range(num_goals):
         annual_lump_sum = 0
         
         if target_type == "Εφάπαξ":
-            target_today = st.number_input("Επιθυμητό Εφάπαξ στη Λήξη (Με Σημερινή Αξία €)", 0.0, 10000000.0, 50000.0, key=f"tt_{i}")
+            target_today = st.number_input("Επιθυμητό Εφάπαξ στη Λήξη (Με Σημερινή Αξία €)", 0.0, 10000000.0, 0.0, key=f"tt_{i}")
         elif target_type == "Μηνιαίες Δόσεις":
             col_t1, col_t2 = st.columns(2)
-            monthly_income = col_t1.number_input("Επιθυμητό Μηνιαίο Εισόδημα στη Λήξη (Με Σημερινή Αξία €)", 0.0, 50000.0, 1500.0, key=f"mi_{i}")
-            m = col_t2.number_input("Έτη Εισοδήματος", 1, 50, 20, key=f"m_{i}")
+            monthly_income = col_t1.number_input("Επιθυμητό Μηνιαίο Εισόδημα στη Λήξη (Με Σημερινή Αξία €)", 0.0, 50000.0, 0.0, key=f"mi_{i}")
+            m = col_t2.number_input("Έτη Εισοδήματος", 1, 50, 0, key=f"m_{i}")
         else:
             col_t1, col_t2, col_t3, col_t4 = st.columns(4)
-            initial_lump_sum = col_t1.number_input("Επιθυμητό Αρχικό Εφάπαξ στη Λήξη (Με Σημερινή Αξία €)", 0.0, 5000000.0, 15000.0, key=f"ils_{i}")
-            annual_lump_sum = col_t2.number_input("Επιθυμητό Επαναλαμβανόμενο/Ετήσιο Εφάπαξ μετά το 1ο Έτος (Με Σημερινή Αξία €)", 0.0, 1000000.0, 5000.0, key=f"als_{i}")
-            monthly_income = col_t3.number_input("Επιθυμητό Μηνιαίο Εισόδημα στη Λήξη (Με Σημερινή Αξία €)", 0.0, 50000.0, 500.0, key=f"mi2_{i}")
-            m = col_t4.number_input("Έτη Δόσεων", 1, 50, 4, key=f"m2_{i}")
+            initial_lump_sum = col_t1.number_input("Επιθυμητό Αρχικό Εφάπαξ στη Λήξη (Με Σημερινή Αξία €)", 0.0, 5000000.0, 0.0, key=f"ils_{i}")
+            annual_lump_sum = col_t2.number_input("Επιθυμητό Επαναλαμβανόμενο/Ετήσιο Εφάπαξ μετά το 1ο Έτος (Με Σημερινή Αξία €)", 0.0, 1000000.0, 0.0, key=f"als_{i}")
+            monthly_income = col_t3.number_input("Επιθυμητό Μηνιαίο Εισόδημα στη Λήξη (Με Σημερινή Αξία €)", 0.0, 50000.0, 0.0, key=f"mi2_{i}")
+            m = col_t4.number_input("Έτη Δόσεων", 1, 50, 0, key=f"m2_{i}")
             
         st.subheader("3. Ευελιξία & Έκτακτες Καταβολές")
         flex1, flex2 = st.columns(2)
@@ -254,7 +254,7 @@ for i in range(num_goals):
                 st.subheader(f"€ {format_gr(target_fv)}")
         with c2:
             with st.container(border=True):
-                st.caption("⚡ Απαιτούμενο Επιπλέον Εφάπαξ Κεφάλαιο προς Επένδυση Σήμερα")
+                st.caption("⚡ Απαιτούμενο Εφάπαξ Κεφάλαιο προς Επένδυση Σήμερα (πέραν του δεσμευμένου από τα διαθέσιμα)")
                 if shortfall <= 0:
                     st.subheader("€ 0,00")
                 else:
@@ -299,11 +299,11 @@ with tabs[-1]:
     mc1, mc2, mc3 = st.columns(3)
     with mc1:
         with st.container(border=True):
-            st.caption("🏦 Διαθέσιμο Κεφάλαιο")
+            st.caption("🏦 Συνολικό Διαθέσιμο Κεφάλαιο Σήμερα")
             st.subheader(f"€ {format_gr(total_capital)}")
     with mc2:
         with st.container(border=True):
-            st.caption("⚖️ Διαθέσιμο Κεφάλαιο προς Επένδυση (Unallocated)")
+            st.caption("⚖️ Υπολοιπόμενο Διαθέσιμο Κεφάλαιο προς Επένδυση που δεν χρησιμοποιήθηκε για τους στόχους (Unallocated)")
             if unallocated < 0:
                 st.error(f"€ {format_gr(unallocated)}")
             else:
@@ -336,7 +336,7 @@ with tabs[-1]:
             for text in master_cf_text:
                 st.write(f"🔹 {text.replace('<b>', '**').replace('</b>', '**')}")
                 
-        st.markdown("### 📈 Γράφημα Συνολικών Απαιτήσεων")
+        st.markdown("### 📈 Γράφημα Συνολικών Απαιτήσεων Ταμειακών Ροών")
         fig_master = go.Figure()
         fig_master.add_trace(go.Bar(x=master_years, y=master_reg, name='Σύνολο Τακτικών Καταβολών', marker_color='#FF9F1C'))
         fig_master.add_trace(go.Bar(x=master_years, y=master_ext, name='Σύνολο Έκτακτων Καταβολών', marker_color='#2A9D8F'))
