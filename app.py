@@ -78,7 +78,7 @@ client_name = st.sidebar.text_input("Ονοματεπώνυμο Πελάτη", v
 total_capital = st.sidebar.number_input("Συνολικό Διαθέσιμο Κεφάλαιο Σήμερα (€)", min_value=0.0, value=None, step=1000.0)
 tc_val = total_capital if total_capital is not None else 0.0
 
-num_goals = st.sidebar.number_input("Αριθμός Στόχων", min_value=1, max_value=10, value=None, step=1)
+num_goals = st.sidebar.number_input("Αριθμός Στόχων", min_value=1, max_value=10, value=1, step=1)
 ng_val = int(num_goals) if num_goals is not None else 2
 
 safe_name = f"_{client_name.replace(' ', '_')}" if client_name.strip() else ""
