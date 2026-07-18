@@ -108,7 +108,7 @@ ng_val = int(num_goals) if num_goals is not None else 2
 safe_name = f"_{client_name.replace(' ', '_')}" if client_name.strip() else ""
 display_name = client_name if client_name.strip() else "Μη Καθορισμένος"
 
-# --- MAIN PAGE HEADER (Εμφανίζεται σταθερά στην κορυφή) ---
+# --- MAIN PAGE HEADER ---
 col_main_title, col_main_logo = st.columns([4, 1])
 with col_main_title:
     st.title("📈 Στρατηγικός Οικονομικός Σχεδιασμός")
@@ -163,12 +163,12 @@ for i in range(ng_val):
             
         total_allocated += alloc_val
         
-        st.subheader("1. Οικονομικό Περιβάλλον")
+        st.subheader("1. Οικονομικό Περιβάλλον & Κύκλοι Αποδόσεων")
         env1, env2, env3, env4 = st.columns(4)
-        n = env1.number_input("Έτη Συσσώρευσης", min_value=1, max_value=60, value=None, key=f"n_{i}")
+        n = env1.number_input("Συνολικά Έτη Συσσώρευσης", min_value=1, max_value=60, value=None, key=f"n_{i}")
         n_val = int(n) if n is not None else 0
         
-        r_acc = env2.number_input("Βασική Απόδοση Συσσώρευσης (%)", min_value=0.0, max_value=20.0, value=None, key=f"r_acc_{i}")
+        num_cycles = env2.number_input("Αριθμός Κύκλων Απόδοσης", min_value=1, max_value=10, value=1, key=f"num_cycles_{i}")
         
         r_ret = env3.number_input("Απόδοση Διατήρησης (%)", min_value=0.0, max_value=20.0, value=None, key=f"r_ret_{i}")
         r_ret_val = (r_ret if r_ret is not None else 0.0) / 100
@@ -178,6 +178,50 @@ for i in range(ng_val):
         
         if n_val > max_years:
             max_years = n_val
+
+        # --- ΓΕΝΝΗΤΡΙΑ ΚΥΚΛΩΝ ΑΠΟΔΟΣΗΣ ---
+        rates_percent = []
+        if n_val > 0:
+            st.markdown("<span style='font-size:15px; font-weight:bold; color:#1E3A8A;'>Καθορισμός Αποδόσεων ανά Κύκλο (Glide Path)</span>", unsafe_allow_html=True)
+            cols = st.columns(num_cycles)
+            total_cycle_years = 0
+            cycle_rates = []
+            cycle_durations = []
+            
+            for c in range(num_cycles):
+                with cols[c]:
+                    with st.container(border=True):
+                        st.caption(f"🔄 Κύκλος {c+1}")
+                        c_rate = st.number_input(f"Απόδοση (%)", min_value=0.0, max_value=50.0, value=None, key=f"c_rate_{i}_{c}")
+                        
+                        if num_cycles == 1:
+                            c_dur_val = n_val
+                            st.write(f"Διάρκεια: **{c_dur_val} έτη**")
+                        else:
+                            rem_years = n_val - total_cycle_years
+                            default_dur = rem_years if c == num_cycles - 1 and rem_years > 0 else None
+                            c_dur = st.number_input(f"Διάρκεια (Έτη)", min_value=0, max_value=60, value=default_dur, key=f"c_dur_{i}_{c}")
+                            c_dur_val = int(c_dur) if c_dur is not None else 0
+                            
+                        c_rate_val = c_rate if c_rate is not None else 0.0
+                        cycle_rates.append(c_rate_val)
+                        cycle_durations.append(c_dur_val)
+                        total_cycle_years += c_dur_val
+            
+            if num_cycles > 1:
+                if total_cycle_years < n_val:
+                    st.warning(f"⚠️ Έχετε ορίσει αποδόσεις για {total_cycle_years} από τα {n_val} έτη. Τα υπόλοιπα {n_val - total_cycle_years} έτη θα υπολογιστούν με 0%.")
+                elif total_cycle_years > n_val:
+                    st.error(f"🚨 Έχετε υπερβεί τα συνολικά έτη! Παρακαλώ προσαρμόστε τη διάρκεια των κύκλων. (Άθροισμα: {total_cycle_years} / Σύνολο: {n_val})")
+
+            # Κατασκευή του πίνακα rates_percent βάσει των κύκλων
+            for rate, dur in zip(cycle_rates, cycle_durations):
+                rates_percent.extend([rate] * dur)
+            
+            # Γέμισμα με 0 αν λείπουν έτη, ή περικοπή αν περισσεύουν (βάσει του n_val)
+            if len(rates_percent) < n_val:
+                rates_percent.extend([0.0] * (n_val - len(rates_percent)))
+            rates_percent = rates_percent[:n_val]
             
         st.subheader("2. Μελλοντικός Στόχος")
         target_type = st.radio("Τύπος Στόχου", ("Εφάπαξ", "Μηνιαίες Δόσεις", "Μικτό (Εφάπαξ & Δόσεις)"), key=f"ttype_{i}")
@@ -208,26 +252,24 @@ for i in range(ng_val):
             m2 = col_t4.number_input("Έτη Δόσεων", min_value=1, max_value=50, value=None, key=f"m2_{i}")
             m_val = int(m2) if m2 is not None else 0
             
-        st.subheader("3. Ευελιξία, Αποδόσεις & Έκτακτες Καταβολές")
+        st.subheader("3. Ευελιξία & Έκτακτες Καταβολές")
         flex1, flex2 = st.columns(2)
         g = flex1.number_input("Ετήσια Αύξηση Δόσης / Step-up (%)", min_value=0.0, max_value=20.0, value=None, key=f"g_{i}")
         g_val = (g if g is not None else 0.0) / 100
         
-        # Πίνακας έκτακτων καταβολών με Δυναμική Απόδοση
+        # Πίνακας έκτακτων καταβολών (Η Απόδοση κλειδώνει βάσει των Κύκλων)
         rows_for_df = n_val if n_val > 0 else 1
-        default_rate = r_acc if r_acc is not None else 0.0
         df_extra_init = pd.DataFrame({
             "Έτος": list(range(1, rows_for_df + 1)),
-            "Απόδοση (%)": [default_rate] * rows_for_df,
+            "Απόδοση (%)": rates_percent if n_val > 0 else [0.0],
             "Έκτακτη (€)": [0.0] * rows_for_df
         })
         
-        flex2.markdown("<span style='font-size:14px; font-weight:bold; color:#555;'>Παραμετροποίηση ανά Έτος</span>", unsafe_allow_html=True)
-        edited_df = flex2.data_editor(df_extra_init, hide_index=True, use_container_width=True, key=f"df_{i}")
+        flex2.markdown("<span style='font-size:14px; font-weight:bold; color:#555;'>Έκτακτες Καταβολές (Η απόδοση ενημερώνεται αυτόματα από τους κύκλους)</span>", unsafe_allow_html=True)
+        edited_df = flex2.data_editor(df_extra_init, hide_index=True, use_container_width=True, disabled=["Έτος", "Απόδοση (%)"], key=f"df_{i}")
         
-        # --- ΑΝΑΛΟΓΙΣΤΙΚΗ ΜΗΧΑΝΗ (Εκτελείται μόνο αν έχει μπει το Έτος Συσσώρευσης) ---
+        # --- ΑΝΑΛΟΓΙΣΤΙΚΗ ΜΗΧΑΝΗ ---
         if n_val > 0:
-            rates_percent = edited_df["Απόδοση (%)"].tolist()[:n_val]
             rates = [r / 100.0 for r in rates_percent]
             ext_contribs = edited_df["Έκτακτη (€)"].tolist()[:n_val]
             
@@ -357,7 +399,7 @@ for i in range(ng_val):
         st.markdown("### 📋 Απαιτούμενες Ταμειακές Ροές Στόχου")
         with st.container(border=True):
             if not goal_cf_text:
-                st.write("Συμπληρώστε τα Έτη Συσσώρευσης (κελί 1) για να υπολογιστούν οι ροές.")
+                st.write("Συμπληρώστε τα Έτη Συσσώρευσης και τις Αποδόσεις (Βήμα 1) για να υπολογιστούν οι ροές.")
             for text in goal_cf_text:
                 st.write(f"🔹 {text.replace('<b>', '**').replace('</b>', '**')}")
 
@@ -389,14 +431,14 @@ with tabs[-1]:
             st.subheader(f"€ {format_gr(tc_val)}")
     with mc2:
         with st.container(border=True):
-            st.caption("⚖️ Υπολοιπόμενο Διαθέσιμο Κεφάλαιο προς Επένδυση (Unallocated) - Δεν αξιοποιήθηκε για τους στόχους")
+            st.caption("⚖️ Υπολοιπόμενο Διαθέσιμο Κεφάλαιο προς Επένδυση (Unallocated)")
             if unallocated < 0:
                 st.error(f"€ {format_gr(unallocated)}")
             else:
                 st.subheader(f"€ {format_gr(unallocated)}")
     with mc3:
         with st.container(border=True):
-            st.caption("🚨 Συνολικό Εφάπαξ Κενό Σήμερα (Κεφάλαιο που απαιτείται σήμερα για την επίτευξη του συνόλου των στόχων)")
+            st.caption("🚨 Συνολικό Εφάπαξ Κενό Σήμερα")
             st.subheader(f"€ {format_gr(total_lump_required)}")
             
     st.markdown("### 📋 Συγκεντρωτικός Πίνακας Ταμειακών Ροών")
@@ -511,7 +553,7 @@ with tabs[-1]:
             <table style='width: 100%; border-collapse: collapse; margin-bottom: 15px;'>
                 <tr>
                     <td style='padding: 5px; width: 50%;'><b>Έτη Συσσώρευσης:</b> {res['n']}</td>
-                    <td style='padding: 5px; width: 50%;'><b>Απόδοση Συσσώρευσης:</b> {rates_str}</td>
+                    <td style='padding: 5px; width: 50%;'><b>Απόδοση Συσσώρευσης:</b><br><span style="font-size:14px; color:#555;">{rates_str}</span></td>
                 </tr>
                 <tr>
                     <td style='padding: 5px;'><b>Απόδοση Διατήρησης:</b> {res['r_ret']*100:.2f}%</td>
