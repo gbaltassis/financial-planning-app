@@ -448,6 +448,7 @@ with tabs[-1]:
             
             <div class="footer">
                 Δημιουργήθηκε μέσω του Συστήματος Στρατηγικού Οικονομικού Σχεδιασμού.<br>
+                Baltassis - Strategic Financial Planning Partner<br>
             </div>
         </body>
         </html>
