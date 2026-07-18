@@ -198,9 +198,7 @@ for i in range(ng_val):
                             c_dur_val = n_val
                             st.write(f"Διάρκεια: **{c_dur_val} έτη**")
                         else:
-                            rem_years = n_val - total_cycle_years
-                            default_dur = rem_years if c == num_cycles - 1 and rem_years > 0 else None
-                            c_dur = st.number_input(f"Διάρκεια (Έτη)", min_value=0, max_value=60, value=default_dur, key=f"c_dur_{i}_{c}")
+                            c_dur = st.number_input(f"Διάρκεια (Έτη)", min_value=0, max_value=60, value=None, key=f"c_dur_{i}_{c}")
                             c_dur_val = int(c_dur) if c_dur is not None else 0
                             
                         c_rate_val = c_rate if c_rate is not None else 0.0
