@@ -143,7 +143,7 @@ for i in range(num_goals):
             max_years = int(n)
             
         st.subheader("2. Μελλοντικός Στόχος")
-        target_type = st.radio("Τύπος Στόχου:", ("Εφάπαξ", "Μηνιαίες Δόσεις", "Μικτό (Εφάπαξ & Δόσεις)"), key=f"ttype_{i}")
+        target_type = st.radio("Τύπος Στόχου", ("Εφάπαξ", "Μηνιαίες Δόσεις", "Μικτό (Εφάπαξ & Δόσεις)"), key=f"ttype_{i}")
         
         target_today = 0
         monthly_income = 0
@@ -152,17 +152,17 @@ for i in range(num_goals):
         annual_lump_sum = 0
         
         if target_type == "Εφάπαξ":
-            target_today = st.number_input("Επιθυμητό Εφάπαξ στη Λήξη (Με Σημερινή Αξία €)", 0.0, 10000000.0, 0.0, key=f"tt_{i}")
+            target_today = st.number_input("Επιθυμητό Εφάπαξ στη Λήξη (Με Σημερινή Αξία €)", 0.0, 10000000.0, 50000.0, key=f"tt_{i}")
         elif target_type == "Μηνιαίες Δόσεις":
             col_t1, col_t2 = st.columns(2)
-            monthly_income = col_t1.number_input("Επιθυμητό Μηνιαίο Εισόδημα στη Λήξη (Με Σημερινή Αξία €)", 0.0, 50000.0, 0.0, key=f"mi_{i}")
-            m = col_t2.number_input("Έτη Εισοδήματος", 1, 50, 0, key=f"m_{i}")
+            monthly_income = col_t1.number_input("Επιθυμητό Μηνιαίο Εισόδημα στη Λήξη (Με Σημερινή Αξία €)", 0.0, 50000.0, 1500.0, key=f"mi_{i}")
+            m = col_t2.number_input("Έτη Εισοδήματος", 1, 50, 20, key=f"m_{i}")
         else:
             col_t1, col_t2, col_t3, col_t4 = st.columns(4)
-            initial_lump_sum = col_t1.number_input("Επιθυμητό Αρχικό Εφάπαξ στη Λήξη (Με Σημερινή Αξία €)", 0.0, 5000000.0, 0.0, key=f"ils_{i}")
-            annual_lump_sum = col_t2.number_input("Επιθυμητό Επαναλαμβανόμενο/Ετήσιο Εφάπαξ μετά το 1ο Έτος (Με Σημερινή Αξία €)", 0.0, 1000000.0, 0.0, key=f"als_{i}")
-            monthly_income = col_t3.number_input("Επιθυμητό Μηνιαίο Εισόδημα στη Λήξη (Με Σημερινή Αξία €)", 0.0, 50000.0, 0.0, key=f"mi2_{i}")
-            m = col_t4.number_input("Έτη Δόσεων", 1, 50, 0, key=f"m2_{i}")
+            initial_lump_sum = col_t1.number_input("Επιθυμητό Αρχικό Εφάπαξ στη Λήξη (Με Σημερινή Αξία €)", 0.0, 5000000.0, 15000.0, key=f"ils_{i}")
+            annual_lump_sum = col_t2.number_input("Επιθυμητό Επαναλαμβανόμενο/Ετήσιο Εφάπαξ μετά το 1ο Έτος (Με Σημερινή Αξία €)", 0.0, 1000000.0, 5000.0, key=f"als_{i}")
+            monthly_income = col_t3.number_input("Επιθυμητό Μηνιαίο Εισόδημα στη Λήξη (Με Σημερινή Αξία €)", 0.0, 50000.0, 500.0, key=f"mi2_{i}")
+            m = col_t4.number_input("Έτη Δόσεων", 1, 50, 4, key=f"m2_{i}")
             
         st.subheader("3. Ευελιξία & Έκτακτες Καταβολές")
         flex1, flex2 = st.columns(2)
@@ -254,7 +254,7 @@ for i in range(num_goals):
                 st.subheader(f"€ {format_gr(target_fv)}")
         with c2:
             with st.container(border=True):
-                st.caption("⚡ Απαιτούμενο Εφάπαξ Κεφάλαιο προς Επένδυση Σήμερα (πέραν του δεσμευμένου από τα διαθέσιμα)")
+                st.caption("⚡ Απαιτούμενο Εφάπαξ Κεφάλαιο προς Επένδυση Σήμερα (πέραν του ήδη δεσμευμένου από τα διαθέσιμα)")
                 if shortfall <= 0:
                     st.subheader("€ 0,00")
                 else:
@@ -486,7 +486,8 @@ with tabs[-1]:
             </ul>
             
             <div class="footer">
-                Δημιουργήθηκε μέσω του Συστήματος Στρατηγικού Οικονομικού Σχεδιασμού.<br>
+                Δημιουργήθηκε μέσω του Συστήματος Στρατηγικού Οικονομικού Σχεδιασμού. 
+                Baltassis - Strategic Financial Planning Partner<br>
             </div>
         </body>
         </html>
