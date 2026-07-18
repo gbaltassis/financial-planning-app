@@ -47,7 +47,7 @@ st.set_page_config(page_title="Strategic Financial Planning", page_icon="📈", 
 st.markdown("""
     <style>
     .main {background-color: #f9f9fb;}
-    h1 {color: #1E3A8A;}
+    h1 {color: #1E3A8A; margin-bottom: 0px; padding-bottom: 0px;}
     .stButton>button {background-color: #1E3A8A; color: white; width: 100%;}
     [data-testid="stSidebar"] img {
         background-color: rgba(255, 255, 255, 0.9);
@@ -78,9 +78,15 @@ num_goals = st.sidebar.number_input("Αριθμός Στόχων", min_value=1, 
 safe_name = f"_{client_name.replace(' ', '_')}" if client_name.strip() else ""
 display_name = client_name if client_name.strip() else "Μη Καθορισμένος"
 
-# --- MAIN PAGE ---
-st.title("📈 Στρατηγικός Οικονομικός Σχεδιασμός")
-st.markdown("Multi-Goal Financial Planning Management")
+# --- MAIN PAGE (HEADER ME LOGO) ---
+col_main_title, col_main_logo = st.columns([4, 1])
+with col_main_title:
+    st.title("📈 Στρατηγικός Οικονομικός Σχεδιασμός")
+    st.markdown("Multi-Goal Financial Planning Management")
+with col_main_logo:
+    if logo_b64:
+        st.markdown(f'<div style="text-align: right; margin-top: 20px;"><img src="data:image/png;base64,{logo_b64}" style="max-height: 60px; opacity: 0.9;"></div>', unsafe_allow_html=True)
+
 st.markdown("---")
 
 tab_names = [f"Στόχος {i+1}" for i in range(num_goals)] + ["📊 Master Dashboard"]
@@ -106,12 +112,7 @@ if temp_total_allocated > total_capital:
 # Επίλυση για κάθε Στόχο
 for i in range(num_goals):
     with tabs[i]:
-        col_title, col_logo = st.columns([4, 1])
-        with col_title:
-            st.header(f"Ρυθμίσεις Στόχου {i+1}")
-        with col_logo:
-            if logo_b64:
-                st.markdown(f'<div style="text-align: right;"><img src="data:image/png;base64,{logo_b64}" style="max-height: 45px; opacity: 0.8;"></div>', unsafe_allow_html=True)
+        st.header(f"Ρυθμίσεις Στόχου {i+1}")
         
         col_name, col_alloc = st.columns(2)
         goal_name = col_name.text_input("Ονομασία Στόχου", value=f"Στόχος {i+1}", key=f"name_{i}")
@@ -265,11 +266,19 @@ for i in range(num_goals):
                 st.subheader(f"€ {format_gr(balance[-1])}")
                 st.write(f"*(Σημερινή Αξία: € {format_gr(balance[-1] / ((1 + inf)**n))})*")
                 
+        # Εμφάνιση του πίνακα Ταμειακών Ροών μέσα στην καρτέλα του Στόχου
+        goal_cf_text = get_cashflow_text(reg_contribs, ext_contribs, int(n))
+        st.markdown("### 📋 Απαιτούμενες Ταμειακές Ροές Στόχου")
+        with st.container(border=True):
+            for text in goal_cf_text:
+                st.write(f"🔹 {text.replace('<b>', '**').replace('</b>', '**')}")
+
+        st.markdown("### 📈 Εξέλιξη Κεφαλαίου")
         fig = go.Figure()
         fig.add_trace(go.Bar(x=years_list, y=reg_contribs, name='Τακτική', marker_color='#FF9F1C'))
         fig.add_trace(go.Bar(x=years_list, y=ext_contribs, name='Έκτακτη', marker_color='#2A9D8F'))
         fig.add_trace(go.Scatter(x=years_list, y=balance, name='Κεφάλαιο', mode='lines+markers', marker_color='#1E3A8A'))
-        fig.update_layout(title=f"Εξέλιξη Κεφαλαίου: {goal_name}", xaxis_title="Έτη", yaxis_title="Ποσό (€)", barmode='stack', hovermode="x unified", plot_bgcolor='rgba(0,0,0,0)', margin=dict(l=0,r=0,t=40,b=0))
+        fig.update_layout(xaxis_title="Έτη", yaxis_title="Ποσό (€)", barmode='stack', hovermode="x unified", plot_bgcolor='rgba(0,0,0,0)', margin=dict(l=0,r=0,t=20,b=0))
         st.plotly_chart(fig, use_container_width=True)
 
 # --- MASTER DASHBOARD ---
