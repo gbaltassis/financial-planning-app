@@ -7,6 +7,7 @@ import base64
 
 # Συνάρτηση για μορφοποίηση στο Ελληνικό πρότυπο
 def format_gr(number):
+    if number is None: return "0,00"
     s = f"{number:,.2f}"
     return s.replace(',', 'X').replace('.', ',').replace('X', '.')
 
@@ -41,6 +42,29 @@ def get_cashflow_text(reg_list, ext_list, years):
     else:
         grouped_text.append(f"<b>Από το έτος {start_y} έως {end_y}:</b> {format_gr(current_val)} € / έτος")
     return grouped_text
+
+# Συνάρτηση δημιουργίας κειμένου μεταβλητών αποδόσεων (Glide Path RLE)
+def get_rates_text(rates_list, years):
+    if not rates_list or years == 0: return "0,00%"
+    grouped = []
+    curr = rates_list[0]
+    start_y = 1
+    for y in range(1, years):
+        val = rates_list[y]
+        if round(val, 2) != round(curr, 2):
+            end_y = y
+            if start_y == end_y:
+                grouped.append(f"Έτος {start_y}: {format_gr(curr)}%")
+            else:
+                grouped.append(f"Έτη {start_y}-{end_y}: {format_gr(curr)}%")
+            start_y = y + 1
+            curr = val
+    end_y = years
+    if start_y == end_y:
+        grouped.append(f"Έτος {start_y}: {format_gr(curr)}%")
+    else:
+        grouped.append(f"Έτη {start_y}-{end_y}: {format_gr(curr)}%")
+    return ", ".join(grouped)
 
 st.set_page_config(page_title="Strategic Financial Planning", page_icon="📈", layout="wide")
 
@@ -144,8 +168,7 @@ for i in range(ng_val):
         n = env1.number_input("Έτη Συσσώρευσης", min_value=1, max_value=60, value=None, key=f"n_{i}")
         n_val = int(n) if n is not None else 0
         
-        r_acc = env2.number_input("Απόδοση Συσσώρευσης (%)", min_value=0.0, max_value=20.0, value=None, key=f"r_acc_{i}")
-        r_acc_val = (r_acc if r_acc is not None else 0.0) / 100
+        r_acc = env2.number_input("Βασική Απόδοση Συσσώρευσης (%)", min_value=0.0, max_value=20.0, value=None, key=f"r_acc_{i}")
         
         r_ret = env3.number_input("Απόδοση Διατήρησης (%)", min_value=0.0, max_value=20.0, value=None, key=f"r_ret_{i}")
         r_ret_val = (r_ret if r_ret is not None else 0.0) / 100
@@ -185,18 +208,29 @@ for i in range(ng_val):
             m2 = col_t4.number_input("Έτη Δόσεων", min_value=1, max_value=50, value=None, key=f"m2_{i}")
             m_val = int(m2) if m2 is not None else 0
             
-        st.subheader("3. Ευελιξία & Έκτακτες Καταβολές")
+        st.subheader("3. Ευελιξία, Αποδόσεις & Έκτακτες Καταβολές")
         flex1, flex2 = st.columns(2)
         g = flex1.number_input("Ετήσια Αύξηση Δόσης / Step-up (%)", min_value=0.0, max_value=20.0, value=None, key=f"g_{i}")
         g_val = (g if g is not None else 0.0) / 100
         
-        # Πίνακας έκτακτων καταβολών - Προσαρμόζεται μόνο αν συμπληρωθούν τα έτη
+        # Πίνακας έκτακτων καταβολών με Δυναμική Απόδοση
         rows_for_df = n_val if n_val > 0 else 1
-        df_extra_init = pd.DataFrame({"Έτος": list(range(1, rows_for_df + 1)), "Έκτακτη (€)": [0.0] * rows_for_df})
+        default_rate = r_acc if r_acc is not None else 0.0
+        df_extra_init = pd.DataFrame({
+            "Έτος": list(range(1, rows_for_df + 1)),
+            "Απόδοση (%)": [default_rate] * rows_for_df,
+            "Έκτακτη (€)": [0.0] * rows_for_df
+        })
+        
+        flex2.markdown("<span style='font-size:14px; font-weight:bold; color:#555;'>Παραμετροποίηση ανά Έτος</span>", unsafe_allow_html=True)
         edited_df = flex2.data_editor(df_extra_init, hide_index=True, use_container_width=True, key=f"df_{i}")
         
         # --- ΑΝΑΛΟΓΙΣΤΙΚΗ ΜΗΧΑΝΗ (Εκτελείται μόνο αν έχει μπει το Έτος Συσσώρευσης) ---
         if n_val > 0:
+            rates_percent = edited_df["Απόδοση (%)"].tolist()[:n_val]
+            rates = [r / 100.0 for r in rates_percent]
+            ext_contribs = edited_df["Έκτακτη (€)"].tolist()[:n_val]
+            
             if target_type == "Εφάπαξ":
                 target_fv = target_today_val * ((1 + inf_val) ** n_val)
             elif target_type == "Μηνιαίες Δόσεις":
@@ -216,14 +250,17 @@ for i in range(ng_val):
                     fv_annuity = C1 * (1 - ((1 + inf_val) / (1 + r_ret_val)) ** m_val) / (r_ret_val - inf_val)
                 target_fv = fv_initial_lump + fv_annuity
                 
-            fv_pv = alloc_val * ((1 + r_acc_val) ** n_val)
+            # Προεξόφληση/Ανατοκισμός με Μεταβλητά Επιτόκια
+            fv_pv = alloc_val
+            for r in rates:
+                fv_pv *= (1 + r)
             
             fv_extra = 0.0
-            for index, row in edited_df.iterrows():
-                y = row["Έτος"]
-                ex = row["Έκτακτη (€)"]
-                if ex > 0 and y <= n_val:
-                    fv_extra += ex * ((1 + r_acc_val) ** (n_val - y))
+            for y_idx in range(n_val):
+                val = ext_contribs[y_idx]
+                for j in range(y_idx + 1, n_val):
+                    val *= (1 + rates[j])
+                fv_extra += val
                     
             shortfall = target_fv - fv_pv - fv_extra
             
@@ -231,16 +268,23 @@ for i in range(ng_val):
                 lump_sum_today = 0.0
                 pmt = 0.0
             else:
-                lump_sum_today = shortfall / ((1 + r_acc_val) ** n_val)
-                if r_acc_val == g_val:
-                    pmt = shortfall / (n_val * ((1 + r_acc_val)**n_val))
-                else:
-                    pmt = shortfall / ((((1 + r_acc_val)**n_val - (1 + g_val)**n_val) / (r_acc_val - g_val)) * (1 + r_acc_val))
+                discount_factor = 1.0
+                for r in rates:
+                    discount_factor *= (1 + r)
+                lump_sum_today = shortfall / discount_factor if discount_factor > 0 else shortfall
+                
+                fv_annuity_factor = 0.0
+                for y_idx in range(n_val):
+                    val = (1 + g_val)**y_idx
+                    for j in range(y_idx, n_val):
+                        val *= (1 + rates[j])
+                    fv_annuity_factor += val
+                    
+                pmt = shortfall / fv_annuity_factor if fv_annuity_factor > 0 else 0.0
                     
             years_list = list(range(1, n_val + 1))
             balance = [alloc_val]
             reg_contribs = []
-            ext_contribs = edited_df["Έκτακτη (€)"].tolist()[:n_val]
             
             curr_pmt = pmt
             for y_idx in range(n_val):
@@ -248,7 +292,7 @@ for i in range(ng_val):
                 reg_contribs.append(rc)
                 ec = ext_contribs[y_idx]
                 
-                new_bal = (balance[-1] + rc) * (1 + r_acc_val) + ec
+                new_bal = (balance[-1] + rc) * (1 + rates[y_idx]) + ec
                 balance.append(new_bal)
                 
                 curr_pmt = curr_pmt * (1 + g_val)
@@ -263,12 +307,13 @@ for i in range(ng_val):
             balance = [alloc_val]
             reg_contribs = []
             ext_contribs = []
+            rates_percent = []
         
         # Αποθήκευση όλων των παραμέτρων
         all_results.append({
             "name": goal_name_val,
             "n": n_val,
-            "r_acc": r_acc_val,
+            "rates": rates_percent,
             "r_ret": r_ret_val,
             "inf": inf_val,
             "g": g_val,
@@ -351,7 +396,7 @@ with tabs[-1]:
                 st.subheader(f"€ {format_gr(unallocated)}")
     with mc3:
         with st.container(border=True):
-            st.caption("🚨 Συνολικό Εφάπαξ Κενό Σήμερα")
+            st.caption("🚨 Συνολικό Εφάπαξ Κενό Σήμερα (Κεφάλαιο που απαιτείται σήμερα για την επίτευξη του συνόλου των στόχων)")
             st.subheader(f"€ {format_gr(total_lump_required)}")
             
     st.markdown("### 📋 Συγκεντρωτικός Πίνακας Ταμειακών Ροών")
@@ -442,6 +487,8 @@ with tabs[-1]:
     for res in all_results:
         if res['n'] == 0:
             continue
+        
+        rates_str = get_rates_text(res['rates'], res['n'])
         goal_cf_text = get_cashflow_text(res['reg'], res['ext'], res['n'])
         goal_cf_html = "".join([f"<li style='font-size: 14px; margin-bottom: 4px;'>{t}</li>" for t in goal_cf_text]) if goal_cf_text else "<li>Καμία Ροή</li>"
         
@@ -463,8 +510,8 @@ with tabs[-1]:
             <h3 style='margin-top: 0; color: #1E3A8A; font-size: 22px;'>{res['name']}</h3>
             <table style='width: 100%; border-collapse: collapse; margin-bottom: 15px;'>
                 <tr>
-                    <td style='padding: 5px;'><b>Έτη Συσσώρευσης:</b> {res['n']}</td>
-                    <td style='padding: 5px;'><b>Απόδοση Συσσώρευσης:</b> {res['r_acc']*100:.2f}%</td>
+                    <td style='padding: 5px; width: 50%;'><b>Έτη Συσσώρευσης:</b> {res['n']}</td>
+                    <td style='padding: 5px; width: 50%;'><b>Απόδοση Συσσώρευσης:</b> {rates_str}</td>
                 </tr>
                 <tr>
                     <td style='padding: 5px;'><b>Απόδοση Διατήρησης:</b> {res['r_ret']*100:.2f}%</td>
