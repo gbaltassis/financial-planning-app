@@ -29,44 +29,45 @@ def get_cashflow_text(reg_list, ext_list, years):
         if round(val, 2) != round(current_val, 2):
             end_y = y
             if start_y == end_y:
-                grouped_text.append(f"**Έτος {start_y}:** {format_gr(current_val)} €")
+                grouped_text.append(f"<b>Έτος {start_y}:</b> {format_gr(current_val)} €")
             else:
-                grouped_text.append(f"**Από το έτος {start_y} έως {end_y}:** {format_gr(current_val)} € / έτος")
+                grouped_text.append(f"<b>Από το έτος {start_y} έως {end_y}:</b> {format_gr(current_val)} € / έτος")
             start_y = y + 1
             current_val = val
     
     end_y = years
     if start_y == end_y:
-        grouped_text.append(f"**Έτος {start_y}:** {format_gr(current_val)} €")
+        grouped_text.append(f"<b>Έτος {start_y}:</b> {format_gr(current_val)} €")
     else:
-        grouped_text.append(f"**Από το έτος {start_y} έως {end_y}:** {format_gr(current_val)} € / έτος")
+        grouped_text.append(f"<b>Από το έτος {start_y} έως {end_y}:</b> {format_gr(current_val)} € / έτος")
     return grouped_text
 
 st.set_page_config(page_title="Strategic Financial Planning", page_icon="📈", layout="wide")
 
-# CSS για την Sidebar και άλλα στοιχεία
 st.markdown("""
     <style>
     .main {background-color: #f9f9fb;}
-    h1 {color: #1E3A8A; margin-bottom: 0px; padding-bottom: 0px;}
+    h1 {color: #1E3A8A; margin-top: 0px; padding-top: 0px;}
     .stButton>button {background-color: #1E3A8A; color: white; width: 100%;}
     [data-testid="stSidebar"] img {
-        background-color: rgba(255, 255, 255, 0.95);
+        background-color: rgba(255, 255, 255, 0.9);
         padding: 15px;
         border-radius: 10px;
-        box-shadow: 0px 2px 4px rgba(0,0,0,0.1);
     }
     </style>
     """, unsafe_allow_html=True)
 
 # Φόρτωση Λογοτύπου
 logo_b64 = ""
+logo_file = None
 if os.path.exists("logo.png"):
-    st.sidebar.image("logo.png", use_container_width=True)
-    logo_b64 = get_base64_image("logo.png")
+    logo_file = "logo.png"
+    st.sidebar.image(logo_file, use_container_width=True)
+    logo_b64 = get_base64_image(logo_file)
 elif os.path.exists("logo.jpg"):
-    st.sidebar.image("logo.jpg", use_container_width=True)
-    logo_b64 = get_base64_image("logo.jpg")
+    logo_file = "logo.jpg"
+    st.sidebar.image(logo_file, use_container_width=True)
+    logo_b64 = get_base64_image(logo_file)
 
 logo_img_tag = f'<img src="data:image/png;base64,{logo_b64}" style="max-height: 110px; max-width: 100%;">' if logo_b64 else '<h2 style="margin:0; color:#1E3A8A;">Strategic Financial Planning</h2>'
 
@@ -80,27 +81,21 @@ num_goals = st.sidebar.number_input("Αριθμός Στόχων", min_value=1, 
 safe_name = f"_{client_name.replace(' ', '_')}" if client_name.strip() else ""
 display_name = client_name if client_name.strip() else "Μη Καθορισμένος"
 
-
-# --- MAIN PAGE HEADER (Ενοποιημένο Title & Logo για να μην σπάει ποτέ) ---
-if logo_b64:
-    header_html = f"""
-    <div style="display: flex; flex-direction: row; justify-content: space-between; align-items: center; padding-bottom: 20px; border-bottom: 2px solid #1E3A8A; margin-bottom: 20px;">
-        <div style="flex: 1;">
-            <h1 style="color: #1E3A8A; margin: 0; padding: 0; font-size: 2.5rem; line-height: 1.2;">📈 Στρατηγικός Οικονομικός Σχεδιασμός</h1>
-            <p style="margin: 5px 0 0 0; padding: 0; font-size: 1.1rem; color: #555;">Multi-Goal Financial Planning Management</p>
-        </div>
-        <div style="background-color: rgba(255, 255, 255, 0.95); padding: 15px; border-radius: 10px; box-shadow: 0px 2px 5px rgba(0,0,0,0.1); display: flex; justify-content: center; align-items: center; margin-left: 20px;">
-            <img src="data:image/png;base64,{logo_b64}" style="max-height: 70px; width: auto; object-fit: contain;">
-        </div>
-    </div>
-    """
-    st.markdown(header_html, unsafe_allow_html=True)
-else:
+# --- MAIN PAGE HEADER (Εμφανίζεται σταθερά στην κορυφή) ---
+col_main_title, col_main_logo = st.columns([4, 1])
+with col_main_title:
     st.title("📈 Στρατηγικός Οικονομικός Σχεδιασμός")
     st.markdown("Multi-Goal Financial Planning Management")
-    st.markdown("---")
+with col_main_logo:
+    if logo_b64:
+        st.markdown(f'''
+            <div style="text-align: right; margin-top: 15px;">
+                <img src="data:image/png;base64,{logo_b64}" 
+                     style="background-color: rgba(255, 255, 255, 0.9); padding: 15px; border-radius: 10px; max-height: 100px; border: 1px solid #e6e6f1; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+            </div>
+        ''', unsafe_allow_html=True)
+st.markdown("---")
 
-# --- ΔΗΜΙΟΥΡΓΙΑ TABS ---
 tab_names = [f"Στόχος {i+1}" for i in range(num_goals)] + ["📊 Master Dashboard"]
 tabs = st.tabs(tab_names)
 
@@ -121,8 +116,7 @@ if temp_total_allocated > total_capital:
     excess = temp_total_allocated - total_capital
     st.sidebar.error(f"🚨 **Υπέρβαση Κεφαλαίου κατά {format_gr(excess)} €!**\n\nΜειώστε τις δεσμεύσεις σας στους Στόχους.")
 
-
-# --- ΕΠΙΛΥΣΗ ΓΙΑ ΚΑΘΕ ΣΤΟΧΟ ---
+# Επίλυση για κάθε Στόχο
 for i in range(num_goals):
     with tabs[i]:
         st.header(f"Ρυθμίσεις Στόχου {i+1}")
@@ -260,7 +254,7 @@ for i in range(num_goals):
                 st.subheader(f"€ {format_gr(target_fv)}")
         with c2:
             with st.container(border=True):
-                st.caption("⚡ Απαιτούμενο Επιπλέον Εφάπαξ Κεφάλαιο Σήμερα")
+                st.caption("⚡ Απαιτούμενο Επιπλέον Εφάπαξ Κεφάλαιο προς Επένδυση Σήμερα")
                 if shortfall <= 0:
                     st.subheader("€ 0,00")
                 else:
@@ -274,22 +268,16 @@ for i in range(num_goals):
                     st.subheader(f"€ {format_gr(pmt)}")
         with c4:
             with st.container(border=True):
-                st.caption("💰 Συνολικό Κεφάλαιο στη Λήξη")
+                st.caption("💰 Συνολικό Κεφάλαιο στη Λήξη (με το πλάνο επένδυσης)")
                 st.subheader(f"€ {format_gr(balance[-1])}")
                 st.write(f"*(Σημερινή Αξία: € {format_gr(balance[-1] / ((1 + inf)**n))})*")
-        
-        
-        # --- ΠΡΟΣΘΗΚΗ: ΠΙΝΑΚΑΣ ΤΑΜΕΙΑΚΩΝ ΡΟΩΝ ΓΙΑ ΤΟΝ ΣΥΓΚΕΚΡΙΜΕΝΟ ΣΤΟΧΟ ---
-        st.markdown(f"### 📋 Συγκεντρωτικός Πίνακας Ταμειακών Ροών ({goal_name})")
+                
         goal_cf_text = get_cashflow_text(reg_contribs, ext_contribs, int(n))
+        st.markdown("### 📋 Απαιτούμενες Ταμειακές Ροές Στόχου")
         with st.container(border=True):
-            if goal_cf_text:
-                for text in goal_cf_text:
-                    st.write(f"🔹 {text}")
-            else:
-                st.write("Δεν απαιτούνται επιπλέον ταμειακές ροές γι' αυτόν τον στόχο.")
+            for text in goal_cf_text:
+                st.write(f"🔹 {text.replace('<b>', '**').replace('</b>', '**')}")
 
-        # --- ΓΡΑΦΗΜΑ ΣΤΟΧΟΥ ---
         st.markdown("### 📈 Εξέλιξη Κεφαλαίου")
         fig = go.Figure()
         fig.add_trace(go.Bar(x=years_list, y=reg_contribs, name='Τακτική', marker_color='#FF9F1C'))
@@ -322,10 +310,10 @@ with tabs[-1]:
                 st.subheader(f"€ {format_gr(unallocated)}")
     with mc3:
         with st.container(border=True):
-            st.caption("🚨 Συνολικό Εφάπαξ Κενό Σήμερα")
+            st.caption("🚨 Συνολικό Εφάπαξ Κενό Σήμερα (Κεφάλαιο που απαιτείται σήμερα για την επίτευξη του συνόλου των στόχων)")
             st.subheader(f"€ {format_gr(total_lump_required)}")
             
-    st.markdown("### 📋 Συγκεντρωτικός Πίνακας Ταμειακών Ροών (Όλοι οι Στόχοι)")
+    st.markdown("### 📋 Συγκεντρωτικός Πίνακας Ταμειακών Ροών")
     
     master_years = []
     master_reg = []
@@ -345,11 +333,8 @@ with tabs[-1]:
         master_cf_text = get_cashflow_text(master_reg, master_ext, max_years)
             
         with st.container(border=True):
-            if master_cf_text:
-                for text in master_cf_text:
-                    st.write(f"🔹 {text}")
-            else:
-                st.write("Δεν απαιτούνται ταμειακές ροές.")
+            for text in master_cf_text:
+                st.write(f"🔹 {text.replace('<b>', '**').replace('</b>', '**')}")
                 
         st.markdown("### 📈 Γράφημα Συνολικών Απαιτήσεων")
         fig_master = go.Figure()
@@ -364,8 +349,7 @@ with tabs[-1]:
         
         col_export1, col_export2 = st.columns(2)
         
-        # Κοινό HTML Header (Corporate Letterhead)
-        export_header_html = f"""
+        header_html = f"""
         <table style="width: 100%; border-bottom: 2px solid #FF9F1C; margin-bottom: 30px; padding-bottom: 10px;">
             <tr>
                 <td style="width: 50%; vertical-align: middle; text-align: left;">
@@ -379,17 +363,15 @@ with tabs[-1]:
         </table>
         """
         
-        # Replace Markdown bold (**) back to HTML bold (<b>) specifically for HTML exports
-        html_master_cf_list = "".join([f"<li>{t.replace('**', '<b>').replace('**', '</b>')}</li>" for t in master_cf_text])
+        html_master_cf_list = "".join([f"<li>{t}</li>" for t in master_cf_text])
         
         goals_short_html = ""
         detailed_goals_html = ""
         
         for res in all_results:
-            goal_cf_text_export = get_cashflow_text(res['reg'], res['ext'], res['n'])
-            goal_cf_html = "".join([f"<li style='font-size: 14px; margin-bottom: 4px;'>{t.replace('**', '<b>').replace('**', '</b>')}</li>" for t in goal_cf_text_export])
+            goal_cf_text = get_cashflow_text(res['reg'], res['ext'], res['n'])
+            goal_cf_html = "".join([f"<li style='font-size: 14px; margin-bottom: 4px;'>{t}</li>" for t in goal_cf_text])
             
-            # Για την Σύντομη Εξαγωγή
             goals_short_html += f"""
             <div style='background: #f4f6f9; padding: 15px; margin-bottom: 10px; border-radius: 8px;'>
                 <h3 style='margin-top: 0; color: #1E3A8A;'>{res['name']}</h3>
@@ -403,7 +385,6 @@ with tabs[-1]:
             </div>
             """
             
-            # Για την Αναλυτική Εξαγωγή
             detailed_goals_html += f"""
             <div style='background: #f4f6f9; padding: 20px; margin-bottom: 15px; border-radius: 8px; border-left: 6px solid #1E3A8A;'>
                 <h3 style='margin-top: 0; color: #1E3A8A; font-size: 22px;'>{res['name']}</h3>
@@ -433,7 +414,6 @@ with tabs[-1]:
             </div>
             """
 
-        # HTML Exports Generation ...
         short_html_content = f"""
         <html>
         <head>
@@ -449,19 +429,23 @@ with tabs[-1]:
             </style>
         </head>
         <body>
-            {export_header_html}
+            {header_html}
+            
             <div class="summary-box">
                 <h2>Γενική Σύνοψη</h2>
                 <p><b>Συνολικό Διαθέσιμο Κεφάλαιο:</b> {format_gr(total_capital)} €</p>
                 <p><b>Αδιάθετο Υπόλοιπο:</b> {format_gr(unallocated)} €</p>
                 <p><b>Συνολικό Εφάπαξ Κενό Σήμερα:</b> {format_gr(total_lump_required)} €</p>
             </div>
+
             <h2>Ανάλυση Στόχων</h2>
             {goals_short_html}
+
             <h2>Συγκεντρωτικό Πλάνο Ταμειακών Ροών</h2>
             <ul class="master-cf">
                 {html_master_cf_list}
             </ul>
+            
             <div class="footer">
                 Δημιουργήθηκε μέσω του Συστήματος Στρατηγικού Οικονομικού Σχεδιασμού.<br>
             </div>
@@ -484,19 +468,23 @@ with tabs[-1]:
             </style>
         </head>
         <body>
-            {export_header_html}
+            {header_html}
+            
             <div class="summary-box">
                 <h2>Γενική Σύνοψη Χαρτοφυλακίου</h2>
                 <p><b>Συνολικό Διαθέσιμο Κεφάλαιο Σήμερα:</b> {format_gr(total_capital)} €</p>
                 <p><b>Διαθέσιμο Κεφάλαιο προς Επένδυση (Unallocated):</b> {format_gr(unallocated)} €</p>
                 <p><b>Συνολικό Εφάπαξ Κενό Σήμερα:</b> {format_gr(total_lump_required)} €</p>
             </div>
+
             <h2>Αναλυτικές Καρτέλες Στόχων</h2>
             {detailed_goals_html}
+
             <h2>Συγκεντρωτικό Πλάνο Ταμειακών Ροών (Όλοι οι Στόχοι)</h2>
             <ul class="master-cf">
                 {html_master_cf_list}
             </ul>
+            
             <div class="footer">
                 Δημιουργήθηκε μέσω του Συστήματος Στρατηγικού Οικονομικού Σχεδιασμού.<br>
             </div>
@@ -504,7 +492,6 @@ with tabs[-1]:
         </html>
         """
         
-        # Κουμπιά Λήψης
         with col_export1:
             st.download_button(
                 label="📄 Σύντομη Εξαγωγή",
