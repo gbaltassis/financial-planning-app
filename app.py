@@ -248,7 +248,7 @@ for i in range(ng_val):
             m2 = col_t4.number_input("Έτη Δόσεων", min_value=1, max_value=50, value=None, key=f"m2_{i}")
             m_val = int(m2) if m2 is not None else 0
             
-        st.subheader("3. Ευελιξία & Έκτακτες Καταβολές")
+        st.subheader("3. Ευελιξία & Έκτακτες Καταβολές (Βασικό Σενάριο)")
         flex1, flex2 = st.columns(2)
         g = flex1.number_input("Ετήσια Αύξηση Δόσης / Step-up (%)", min_value=0.0, max_value=20.0, value=None, key=f"g_{i}")
         g_val = (g if g is not None else 0.0) / 100
@@ -407,17 +407,30 @@ for i in range(ng_val):
         else:
             st.info("Εισάγετε δεδομένα για να δείτε το γράφημα.")
             
-        # --- WHAT-IF ΑΝΑΛΥΣΗ (ΑΝΤΙΣΤΡΟΦΗ ΑΝΑΖΗΤΗΣΗ) ---
+        # --- WHAT-IF ΑΝΑΛΥΣΗ (ΑΝΤΙΣΤΡΟΦΗ ΑΝΑΖΗΤΗΣΗ) ΠΛΗΡΩΣ ΠΑΡΑΜΕΤΡΟΠΟΙΗΣΙΜΗ ---
         st.markdown("---")
         with st.expander("🔄 Εναλλακτικό Σενάριο (Αντίστροφη Αναζήτηση Εφικτότητας)"):
-            st.markdown("Ελέγξτε τι ποσοστό του στόχου μπορείτε να καλύψετε με τα **διαθέσιμα χρήματα σήμερα** και μια **προκαθορισμένη τακτική αποταμίευση**.")
+            st.markdown("Ελέγξτε τι ποσοστό του στόχου μπορείτε να καλύψετε με τα **διαθέσιμα χρήματα σήμερα** και μια **προκαθορισμένη τακτική ή/και έκτακτη αποταμίευση**.")
             
-            col_wi1, col_wi2, col_wi3 = st.columns(3)
+            col_wi1, col_wi2, col_wi3, col_wi4 = st.columns(4)
             wi_lump = col_wi1.number_input("Διαθέσιμο Εφάπαξ Σήμερα (€)", min_value=0.0, value=float(alloc_val), step=1000.0, key=f"wi_lump_{i}")
             wi_freq = col_wi2.selectbox("Συχνότητα Τακτικών Καταβολών", ["Μηνιαία", "Τριμηνιαία", "Εξαμηνιαία", "Ετήσια"], index=0, key=f"wi_freq_{i}")
             wi_pmt_freq = col_wi3.number_input(f"Ποσό (ανά {wi_freq.replace('ία', 'ίο')})", min_value=0.0, value=0.0, step=50.0, key=f"wi_pmt_{i}")
+            wi_g = col_wi4.number_input("Ετήσια Αύξηση Δόσης (%)", min_value=0.0, max_value=20.0, value=0.0, step=0.5, key=f"wi_g_{i}")
+            wi_g_val = wi_g / 100.0
+            
+            st.markdown("<span style='font-size:14px; font-weight:bold; color:#555;'>Έκτακτες Καταβολές Εναλλακτικού Σεναρίου (π.χ. Πώληση Ακινήτου, Μπόνους)</span>", unsafe_allow_html=True)
+            
+            col_wi_table, col_wi_empty = st.columns([1, 1])
+            with col_wi_table:
+                wi_df_extra_init = pd.DataFrame({
+                    "Έτος": list(range(1, rows_for_df + 1)),
+                    "Έκτακτη Εναλλακτικού (€)": [0.0] * rows_for_df
+                })
+                wi_edited_df = st.data_editor(wi_df_extra_init, hide_index=True, use_container_width=True, disabled=["Έτος"], key=f"wi_df_extra_{i}")
             
             if n_val > 0:
+                wi_ext_contribs = wi_edited_df["Έκτακτη Εναλλακτικού (€)"].tolist()[:n_val]
                 freq_multiplier = {"Μηνιαία": 12, "Τριμηνιαία": 4, "Εξαμηνιαία": 2, "Ετήσια": 1}
                 wi_pmt_annual = wi_pmt_freq * freq_multiplier[wi_freq]
                 
@@ -426,8 +439,8 @@ for i in range(ng_val):
                 
                 # Προβολή ταμειακών ροών εναλλακτικού σεναρίου χρησιμοποιώντας το Glide Path
                 for y_idx in range(n_val):
-                    wi_fv = (wi_fv + wi_curr_pmt) * (1 + rates[y_idx])
-                    wi_curr_pmt = wi_curr_pmt * (1 + g_val)
+                    wi_fv = (wi_fv + wi_curr_pmt) * (1 + rates[y_idx]) + wi_ext_contribs[y_idx]
+                    wi_curr_pmt = wi_curr_pmt * (1 + wi_g_val)
                     
                 coverage_pct = (wi_fv / target_fv) * 100 if target_fv > 0 else 100.0
                 
@@ -443,7 +456,7 @@ for i in range(ng_val):
                     shortfall_wi = target_fv - wi_fv
                     st.warning(f"⚠️ Με αυτό το πλάνο αποταμίευσης, υπολείπονται **€ {format_gr(shortfall_wi)}** (σε μελλοντική αξία) για την επίτευξη του στόχου.")
                 else:
-                    st.success("✅ Εξαιρετικά! Το εναλλακτικό σενάριο επαρκεί για να καλύψει πλήρως τον στόχο.")
+                    st.success("✅ Εξαιρετικά! Το εναλλακτικό σενάριο επαρκεί για να καλύψει πλήρως ή και να υπερβεί τον στόχο.")
             else:
                 st.info("Συμπληρώστε τα έτη συσσώρευσης στο Βήμα 1 για να εμφανιστεί η ανάλυση.")
 
