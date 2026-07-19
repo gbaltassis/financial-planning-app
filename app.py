@@ -392,7 +392,7 @@ for i in range(ng_val):
         else:
             st.info("Εισάγετε δεδομένα για να δείτε το γράφημα.")
             
-        # --- WHAT-IF ΑΝΑΛΥΣΗ (ΑΝΤΙΣΤΡΟΦΗ ΑΝΑΖΗΤΗΣΗ) ΜΕ ΠΩΛΗΣΙΑΚΗ ΠΡΟΣΕΓΓΙΣΗ ---
+        # --- WHAT-IF ΑΝΑΛΥΣΗ (ΑΝΤΙΣΤΡΟΦΗ ΑΝΑΖΗΤΗΣΗ) ---
         st.markdown("---")
         wi_fv = 0.0
         coverage_pct = 0.0
@@ -427,7 +427,6 @@ for i in range(ng_val):
                 wi_fv = wi_lump
                 wi_curr_pmt = wi_pmt_annual
                 
-                # Προβολή ταμειακών ροών εναλλακτικού σεναρίου χρησιμοποιώντας το Glide Path
                 for y_idx in range(n_val):
                     wi_fv = (wi_fv + wi_curr_pmt) * (1 + rates[y_idx]) + wi_ext_contribs[y_idx]
                     wi_curr_pmt = wi_curr_pmt * (1 + wi_g_val)
@@ -435,7 +434,6 @@ for i in range(ng_val):
                 coverage_pct = (wi_fv / target_fv) * 100 if target_fv > 0 else 100.0
                 coverage_ratio = coverage_pct / 100.0
                 
-                # Δημιουργία του Πωλησιακού Κειμένου Βάσει Στόχου (Color Fix Applied)
                 if target_fv > 0:
                     if target_type == "Εφάπαξ":
                         sec_lump = target_today_val * coverage_ratio
@@ -457,7 +455,6 @@ for i in range(ng_val):
                 
                 st.progress(min(coverage_pct / 100, 1.0))
                 
-                # Εμφάνιση του Sales Text με εξαναγκασμένο σκούρο χρώμα (color: #1e293b;)
                 if wi_sales_text:
                     st.markdown(f"<div style='padding: 15px; background-color: #e8f4f8; border-left: 5px solid #2A9D8F; border-radius: 5px; margin-top: 15px; color: #1e293b;'>{wi_sales_text}</div>", unsafe_allow_html=True)
                 
@@ -469,15 +466,21 @@ for i in range(ng_val):
             else:
                 st.info("Συμπληρώστε τα έτη συσσώρευσης στο Βήμα 1 για να εμφανιστεί η ανάλυση.")
         
-        # Αποθήκευση στο Λεξικό για το Master Dashboard & τα Exports
+        # ΠΡΟΣΘΗΚΗ ΟΛΩΝ ΤΩΝ ΔΕΔΟΜΕΝΩΝ ΣΤΟ ЛΕΞΙΚΟ ΓΙΑ ΠΛΗΡΗ ΕΞΑΓΩΓΗ
         all_results.append({
             "name": goal_name_val,
+            "allocated_pv": alloc_val,
             "n": n_val,
             "rates": rates_percent,
             "r_ret": r_ret_val,
             "inf": inf_val,
             "g": g_val,
             "target_type": target_type,
+            "target_today": target_today_val,
+            "monthly_income": monthly_income_val,
+            "m": m_val,
+            "initial_lump_sum": initial_lump_sum_val,
+            "annual_lump_sum": annual_lump_sum_val,
             "reg": reg_contribs,
             "ext": ext_contribs,
             "lump_today": lump_sum_today,
@@ -613,6 +616,16 @@ with tabs[-1]:
         goal_cf_text = get_cashflow_text(res['reg'], res['ext'], res['n'])
         goal_cf_html = "".join([f"<li style='font-size: 14px; margin-bottom: 4px;'>{t}</li>" for t in goal_cf_text]) if goal_cf_text else "<li>Καμία Ροή</li>"
         
+        # --- HTML Target Parameters (ΓΙΑ ΤΗΝ ΑΝΑΛΥΤΙΚΗ ΕΞΑΓΩΓΗ) ---
+        target_params_html = ""
+        if res['target_type'] == "Εφάπαξ":
+            target_params_html = f"<li><b>Επιθυμητό Εφάπαξ (Σε Σημερινή Αξία):</b> {format_gr(res['target_today'])} €</li>"
+        elif res['target_type'] == "Μηνιαίες Δόσεις":
+            target_params_html = f"<li><b>Επιθυμητό Μηνιαίο Εισόδημα (Σε Σημερινή Αξία):</b> {format_gr(res['monthly_income'])} €</li><li><b>Έτη Εισοδήματος:</b> {res['m']}</li>"
+        else:
+            target_params_html = f"<li><b>Αρχικό Εφάπαξ (Σε Σημερινή Αξία):</b> {format_gr(res['initial_lump_sum'])} €</li><li><b>Ετήσιο Εφάπαξ (Σε Σημερινή Αξία):</b> {format_gr(res['annual_lump_sum'])} €</li><li><b>Μηνιαίο Εισόδημα (Σε Σημερινή Αξία):</b> {format_gr(res['monthly_income'])} €</li><li><b>Έτη Δόσεων:</b> {res['m']}</li>"
+
+        # --- HTML What-If Εναλλακτικό Σενάριο ---
         wi_export_html = ""
         if res.get('wi_sales_text'):
             wi_ext_text = ""
@@ -626,7 +639,7 @@ with tabs[-1]:
                     <b>Παράμετροι που επιλέχθηκαν:</b><br>
                     • Διαθέσιμο Εφάπαξ: <b>{format_gr(res.get('wi_lump', 0))} €</b><br>
                     • Τακτική Καταβολή ({res.get('wi_freq', '')}): <b>{format_gr(res.get('wi_pmt_freq', 0))} €</b><br>
-                    • Ετήσια Αύξηση Δόσης: <b>{format_gr(res.get('wi_g', 0))}%</b>{wi_ext_text}
+                    • Ετήσια Αύξηση Δόσης: <b>{format_gr(res.get('wi_g', 0)*100)}%</b>{wi_ext_text}
                 </div>
                 <p style='margin: 0 0 10px 0; font-size: 14px;'><b>Εκτιμώμενο Κεφάλαιο στη Λήξη:</b> {format_gr(res['wi_fv'])} € ({format_gr(res['wi_coverage_pct'])}% κάλυψη στόχου)</p>
                 <p style='margin: 0; font-size: 14px;'>{res['wi_sales_text']}</p>
@@ -650,6 +663,15 @@ with tabs[-1]:
         detailed_goals_html += f"""
         <div style='background: #f4f6f9; padding: 20px; margin-bottom: 15px; border-radius: 8px; border-left: 6px solid #1E3A8A;'>
             <h3 style='margin-top: 0; color: #1E3A8A; font-size: 22px;'>{res['name']}</h3>
+            
+            <div style='margin-bottom: 15px; font-size: 14px; background: #ffffff; padding: 10px; border-radius: 5px; border: 1px solid #ddd;'>
+                <h4 style='margin: 0 0 8px 0; color: #1E3A8A; font-size: 15px;'>Αρχικές Παράμετροι & Στόχος</h4>
+                <ul style='margin-top: 0; margin-bottom: 0; padding-left: 20px; color: #333;'>
+                    <li><b>Δεσμευμένο Κεφάλαιο Σήμερα:</b> {format_gr(res['allocated_pv'])} €</li>
+                    {target_params_html}
+                </ul>
+            </div>
+
             <table style='width: 100%; border-collapse: collapse; margin-bottom: 15px;'>
                 <tr>
                     <td style='padding: 5px; width: 50%;'><b>Έτη Συσσώρευσης:</b> {res['n']}</td>
@@ -664,6 +686,7 @@ with tabs[-1]:
                     <td style='padding: 5px;'><b>Τύπος Στόχου:</b> {res['target_type']}</td>
                 </tr>
             </table>
+            
             <div style='border-top: 1px solid #ddd; padding-top: 10px;'>
                 <p><b>Στόχος στη Λήξη (Αναπροσαρμοσμένος):</b> {format_gr(res['target_fv'])} €</p>
                 <p><b>Απαιτούμενο Επιπλέον Εφάπαξ Σήμερα:</b> {format_gr(res['lump_today'])} €</p>
