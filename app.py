@@ -397,6 +397,7 @@ for i in range(ng_val):
         wi_fv = 0.0
         coverage_pct = 0.0
         wi_sales_text = ""
+        wi_ext_contribs = []
         
         with st.expander("🔄 Εναλλακτικό Σενάριο (Αντίστροφη Αναζήτηση Εφικτότητας)"):
             st.markdown("Ελέγξτε τι ποσοστό του στόχου μπορείτε να καλύψετε με τα **διαθέσιμα χρήματα σήμερα** και μια **προκαθορισμένη τακτική ή/και έκτακτη αποταμίευση**.")
@@ -434,7 +435,7 @@ for i in range(ng_val):
                 coverage_pct = (wi_fv / target_fv) * 100 if target_fv > 0 else 100.0
                 coverage_ratio = coverage_pct / 100.0
                 
-                # Δημιουργία του Πωλησιακού Κειμένου Βάσει Στόχου
+                # Δημιουργία του Πωλησιακού Κειμένου Βάσει Στόχου (Color Fix Applied)
                 if target_fv > 0:
                     if target_type == "Εφάπαξ":
                         sec_lump = target_today_val * coverage_ratio
@@ -456,9 +457,9 @@ for i in range(ng_val):
                 
                 st.progress(min(coverage_pct / 100, 1.0))
                 
-                # Εμφάνιση του Sales Text
+                # Εμφάνιση του Sales Text με εξαναγκασμένο σκούρο χρώμα (color: #1e293b;)
                 if wi_sales_text:
-                    st.markdown(f"<div style='padding: 15px; background-color: #e8f4f8; border-left: 5px solid #2A9D8F; border-radius: 5px; margin-top: 15px;'>{wi_sales_text}</div>", unsafe_allow_html=True)
+                    st.markdown(f"<div style='padding: 15px; background-color: #e8f4f8; border-left: 5px solid #2A9D8F; border-radius: 5px; margin-top: 15px; color: #1e293b;'>{wi_sales_text}</div>", unsafe_allow_html=True)
                 
                 if coverage_pct < 100:
                     shortfall_wi = target_fv - wi_fv
@@ -484,7 +485,12 @@ for i in range(ng_val):
             "balance_final": balance[-1] if len(balance) > 0 else 0.0,
             "wi_fv": wi_fv,
             "wi_coverage_pct": coverage_pct,
-            "wi_sales_text": wi_sales_text
+            "wi_sales_text": wi_sales_text,
+            "wi_lump": wi_lump,
+            "wi_freq": wi_freq,
+            "wi_pmt_freq": wi_pmt_freq,
+            "wi_g": wi_g,
+            "wi_ext": wi_ext_contribs
         })
 
 # --- MASTER DASHBOARD ---
@@ -609,11 +615,21 @@ with tabs[-1]:
         
         wi_export_html = ""
         if res.get('wi_sales_text'):
+            wi_ext_text = ""
+            if sum(res.get('wi_ext', [])) > 0:
+                wi_ext_text = "<br>• <b>Έκτακτες Καταβολές:</b> Ναι (Έχουν συμπεριληφθεί στον υπολογισμό)"
+            
             wi_export_html = f"""
-            <div style='margin-top: 15px; padding: 15px; background-color: #e8f4f8; border-left: 4px solid #2A9D8F; border-radius: 4px;'>
-                <h4 style='margin-top: 0; margin-bottom: 5px; color: #2A9D8F; font-size: 15px;'>🔄 Αποτελέσματα Εναλλακτικού Σεναρίου (Αντίστροφη Αναζήτηση)</h4>
+            <div style='margin-top: 15px; padding: 15px; background-color: #e8f4f8; border-left: 4px solid #2A9D8F; border-radius: 4px; color: #1e293b;'>
+                <h4 style='margin-top: 0; margin-bottom: 10px; color: #2A9D8F; font-size: 15px;'>🔄 Αποτελέσματα Εναλλακτικού Σεναρίου (Αντίστροφη Αναζήτηση)</h4>
+                <div style='margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid #cce3ec; font-size: 13px;'>
+                    <b>Παράμετροι που επιλέχθηκαν:</b><br>
+                    • Διαθέσιμο Εφάπαξ: <b>{format_gr(res.get('wi_lump', 0))} €</b><br>
+                    • Τακτική Καταβολή ({res.get('wi_freq', '')}): <b>{format_gr(res.get('wi_pmt_freq', 0))} €</b><br>
+                    • Ετήσια Αύξηση Δόσης: <b>{format_gr(res.get('wi_g', 0))}%</b>{wi_ext_text}
+                </div>
                 <p style='margin: 0 0 10px 0; font-size: 14px;'><b>Εκτιμώμενο Κεφάλαιο στη Λήξη:</b> {format_gr(res['wi_fv'])} € ({format_gr(res['wi_coverage_pct'])}% κάλυψη στόχου)</p>
-                <p style='margin: 0; font-size: 14px; color: #333;'>{res['wi_sales_text']}</p>
+                <p style='margin: 0; font-size: 14px;'>{res['wi_sales_text']}</p>
             </div>
             """
         
