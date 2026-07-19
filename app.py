@@ -212,11 +212,9 @@ for i in range(ng_val):
                 elif total_cycle_years > n_val:
                     st.error(f"🚨 Έχετε υπερβεί τα συνολικά έτη! Παρακαλώ προσαρμόστε τη διάρκεια των κύκλων. (Άθροισμα: {total_cycle_years} / Σύνολο: {n_val})")
 
-            # Κατασκευή του πίνακα rates_percent βάσει των κύκλων
             for rate, dur in zip(cycle_rates, cycle_durations):
                 rates_percent.extend([rate] * dur)
             
-            # Γέμισμα με 0 αν λείπουν έτη, ή περικοπή αν περισσεύουν (βάσει του n_val)
             if len(rates_percent) < n_val:
                 rates_percent.extend([0.0] * (n_val - len(rates_percent)))
             rates_percent = rates_percent[:n_val]
@@ -255,7 +253,6 @@ for i in range(ng_val):
         g = flex1.number_input("Ετήσια Αύξηση Δόσης / Step-up (%)", min_value=0.0, max_value=20.0, value=None, key=f"g_{i}")
         g_val = (g if g is not None else 0.0) / 100
         
-        # Πίνακας έκτακτων καταβολών (Η Απόδοση κλειδώνει βάσει των Κύκλων)
         rows_for_df = n_val if n_val > 0 else 1
         df_extra_init = pd.DataFrame({
             "Έτος": list(range(1, rows_for_df + 1)),
@@ -263,7 +260,7 @@ for i in range(ng_val):
             "Έκτακτη (€)": [0.0] * rows_for_df
         })
         
-        flex2.markdown("<span style='font-size:14px; font-weight:bold; color:#555;'>Έκτακτες Καταβολές (Η απόδοση ενημερώνεται αυτόματα από τους κύκλους)</span>", unsafe_allow_html=True)
+        flex2.markdown("<span style='font-size:14px; font-weight:bold; color:#555;'>Έκτακτες Καταβολές (Η απόδοση ενημερώνεται αυτόματα)</span>", unsafe_allow_html=True)
         edited_df = flex2.data_editor(df_extra_init, hide_index=True, use_container_width=True, disabled=["Έτος", "Απόδοση (%)"], key=f"df_{i}")
         
         # --- ΑΝΑΛΟΓΙΣΤΙΚΗ ΜΗΧΑΝΗ ---
@@ -290,7 +287,6 @@ for i in range(ng_val):
                     fv_annuity = C1 * (1 - ((1 + inf_val) / (1 + r_ret_val)) ** m_val) / (r_ret_val - inf_val)
                 target_fv = fv_initial_lump + fv_annuity
                 
-            # Προεξόφληση/Ανατοκισμός με Μεταβλητά Επιτόκια
             fv_pv = alloc_val
             for r in rates:
                 fv_pv *= (1 + r)
@@ -349,7 +345,6 @@ for i in range(ng_val):
             ext_contribs = []
             rates_percent = []
         
-        # Αποθήκευση όλων των παραμέτρων
         all_results.append({
             "name": goal_name_val,
             "n": n_val,
@@ -411,6 +406,46 @@ for i in range(ng_val):
             st.plotly_chart(fig, use_container_width=True)
         else:
             st.info("Εισάγετε δεδομένα για να δείτε το γράφημα.")
+            
+        # --- WHAT-IF ΑΝΑΛΥΣΗ (ΑΝΤΙΣΤΡΟΦΗ ΑΝΑΖΗΤΗΣΗ) ---
+        st.markdown("---")
+        with st.expander("🔄 Εναλλακτικό Σενάριο (Αντίστροφη Αναζήτηση Εφικτότητας)"):
+            st.markdown("Ελέγξτε τι ποσοστό του στόχου μπορείτε να καλύψετε με τα **διαθέσιμα χρήματα σήμερα** και μια **προκαθορισμένη τακτική αποταμίευση**.")
+            
+            col_wi1, col_wi2, col_wi3 = st.columns(3)
+            wi_lump = col_wi1.number_input("Διαθέσιμο Εφάπαξ Σήμερα (€)", min_value=0.0, value=float(alloc_val), step=1000.0, key=f"wi_lump_{i}")
+            wi_freq = col_wi2.selectbox("Συχνότητα Τακτικών Καταβολών", ["Μηνιαία", "Τριμηνιαία", "Εξαμηνιαία", "Ετήσια"], index=0, key=f"wi_freq_{i}")
+            wi_pmt_freq = col_wi3.number_input(f"Ποσό (ανά {wi_freq.replace('ία', 'ίο')})", min_value=0.0, value=0.0, step=50.0, key=f"wi_pmt_{i}")
+            
+            if n_val > 0:
+                freq_multiplier = {"Μηνιαία": 12, "Τριμηνιαία": 4, "Εξαμηνιαία": 2, "Ετήσια": 1}
+                wi_pmt_annual = wi_pmt_freq * freq_multiplier[wi_freq]
+                
+                wi_fv = wi_lump
+                wi_curr_pmt = wi_pmt_annual
+                
+                # Προβολή ταμειακών ροών εναλλακτικού σεναρίου χρησιμοποιώντας το Glide Path
+                for y_idx in range(n_val):
+                    wi_fv = (wi_fv + wi_curr_pmt) * (1 + rates[y_idx])
+                    wi_curr_pmt = wi_curr_pmt * (1 + g_val)
+                    
+                coverage_pct = (wi_fv / target_fv) * 100 if target_fv > 0 else 100.0
+                
+                st.markdown("#### 📊 Αποτελέσματα Εναλλακτικού Σεναρίου")
+                cw1, cw2, cw3 = st.columns(3)
+                cw1.metric("Εκτιμώμενο Κεφάλαιο στη Λήξη", f"€ {format_gr(wi_fv)}")
+                cw2.metric("Αρχικός Στόχος στη Λήξη", f"€ {format_gr(target_fv)}")
+                cw3.metric("Ποσοστό Κάλυψης Στόχου", f"{format_gr(coverage_pct)}%")
+                
+                st.progress(min(coverage_pct / 100, 1.0))
+                
+                if coverage_pct < 100:
+                    shortfall_wi = target_fv - wi_fv
+                    st.warning(f"⚠️ Με αυτό το πλάνο αποταμίευσης, υπολείπονται **€ {format_gr(shortfall_wi)}** (σε μελλοντική αξία) για την επίτευξη του στόχου.")
+                else:
+                    st.success("✅ Εξαιρετικά! Το εναλλακτικό σενάριο επαρκεί για να καλύψει πλήρως τον στόχο.")
+            else:
+                st.info("Συμπληρώστε τα έτη συσσώρευσης στο Βήμα 1 για να εμφανιστεί η ανάλυση.")
 
 # --- MASTER DASHBOARD ---
 with tabs[-1]:
