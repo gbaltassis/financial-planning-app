@@ -345,21 +345,6 @@ for i in range(ng_val):
             ext_contribs = []
             rates_percent = []
         
-        all_results.append({
-            "name": goal_name_val,
-            "n": n_val,
-            "rates": rates_percent,
-            "r_ret": r_ret_val,
-            "inf": inf_val,
-            "g": g_val,
-            "target_type": target_type,
-            "reg": reg_contribs,
-            "ext": ext_contribs,
-            "lump_today": lump_sum_today,
-            "target_fv": target_fv,
-            "balance_final": balance[-1] if len(balance) > 0 else 0.0
-        })
-        
         st.markdown("---")
         c1, c2, c3, c4 = st.columns(4)
         with c1:
@@ -407,8 +392,12 @@ for i in range(ng_val):
         else:
             st.info("Εισάγετε δεδομένα για να δείτε το γράφημα.")
             
-        # --- WHAT-IF ΑΝΑΛΥΣΗ (ΑΝΤΙΣΤΡΟΦΗ ΑΝΑΖΗΤΗΣΗ) ΠΛΗΡΩΣ ΠΑΡΑΜΕΤΡΟΠΟΙΗΣΙΜΗ ---
+        # --- WHAT-IF ΑΝΑΛΥΣΗ (ΑΝΤΙΣΤΡΟΦΗ ΑΝΑΖΗΤΗΣΗ) ΜΕ ΠΩΛΗΣΙΑΚΗ ΠΡΟΣΕΓΓΙΣΗ ---
         st.markdown("---")
+        wi_fv = 0.0
+        coverage_pct = 0.0
+        wi_sales_text = ""
+        
         with st.expander("🔄 Εναλλακτικό Σενάριο (Αντίστροφη Αναζήτηση Εφικτότητας)"):
             st.markdown("Ελέγξτε τι ποσοστό του στόχου μπορείτε να καλύψετε με τα **διαθέσιμα χρήματα σήμερα** και μια **προκαθορισμένη τακτική ή/και έκτακτη αποταμίευση**.")
             
@@ -443,6 +432,21 @@ for i in range(ng_val):
                     wi_curr_pmt = wi_curr_pmt * (1 + wi_g_val)
                     
                 coverage_pct = (wi_fv / target_fv) * 100 if target_fv > 0 else 100.0
+                coverage_ratio = coverage_pct / 100.0
+                
+                # Δημιουργία του Πωλησιακού Κειμένου Βάσει Στόχου
+                if target_fv > 0:
+                    if target_type == "Εφάπαξ":
+                        sec_lump = target_today_val * coverage_ratio
+                        wi_sales_text = f"💡 Πρακτικά, με αυτό το σενάριο εξασφαλίζετε <b>{format_gr(sec_lump)} €</b> (σε σημερινή αγοραστική αξία) από τα {format_gr(target_today_val)} € που επιθυμείτε συνολικά."
+                    elif target_type == "Μηνιαίες Δόσεις":
+                        sec_mi = monthly_income_val * coverage_ratio
+                        wi_sales_text = f"💡 Πρακτικά, με αυτό το σενάριο εξασφαλίζετε <b>{format_gr(sec_mi)} € / μήνα</b> (σε σημερινή αγοραστική αξία) για ολόκληρη τη διάρκεια των {m_val} ετών, από τα {format_gr(monthly_income_val)} € που επιθυμείτε."
+                    else:
+                        sec_ils = initial_lump_sum_val * coverage_ratio
+                        sec_als = annual_lump_sum_val * coverage_ratio
+                        sec_mi = monthly_income_val * coverage_ratio
+                        wi_sales_text = f"💡 Πρακτικά, με αυτό το σενάριο εξασφαλίζετε αναλογικά (σε σημερινή αξία):<br>• Αρχικό Εφάπαξ: <b>{format_gr(sec_ils)} €</b><br>• Ετήσιο Εφάπαξ: <b>{format_gr(sec_als)} €</b><br>• Μηνιαίο Εισόδημα: <b>{format_gr(sec_mi)} € / μήνα</b>"
                 
                 st.markdown("#### 📊 Αποτελέσματα Εναλλακτικού Σεναρίου")
                 cw1, cw2, cw3 = st.columns(3)
@@ -452,13 +456,36 @@ for i in range(ng_val):
                 
                 st.progress(min(coverage_pct / 100, 1.0))
                 
+                # Εμφάνιση του Sales Text
+                if wi_sales_text:
+                    st.markdown(f"<div style='padding: 15px; background-color: #e8f4f8; border-left: 5px solid #2A9D8F; border-radius: 5px; margin-top: 15px;'>{wi_sales_text}</div>", unsafe_allow_html=True)
+                
                 if coverage_pct < 100:
                     shortfall_wi = target_fv - wi_fv
-                    st.warning(f"⚠️ Με αυτό το πλάνο αποταμίευσης, υπολείπονται **€ {format_gr(shortfall_wi)}** (σε μελλοντική αξία) για την επίτευξη του στόχου.")
+                    st.warning(f"⚠️ Υπολείπονται **€ {format_gr(shortfall_wi)}** (σε μελλοντική αξία) για την 100% επίτευξη του στόχου.")
                 else:
                     st.success("✅ Εξαιρετικά! Το εναλλακτικό σενάριο επαρκεί για να καλύψει πλήρως ή και να υπερβεί τον στόχο.")
             else:
                 st.info("Συμπληρώστε τα έτη συσσώρευσης στο Βήμα 1 για να εμφανιστεί η ανάλυση.")
+        
+        # Αποθήκευση στο Λεξικό για το Master Dashboard & τα Exports
+        all_results.append({
+            "name": goal_name_val,
+            "n": n_val,
+            "rates": rates_percent,
+            "r_ret": r_ret_val,
+            "inf": inf_val,
+            "g": g_val,
+            "target_type": target_type,
+            "reg": reg_contribs,
+            "ext": ext_contribs,
+            "lump_today": lump_sum_today,
+            "target_fv": target_fv,
+            "balance_final": balance[-1] if len(balance) > 0 else 0.0,
+            "wi_fv": wi_fv,
+            "wi_coverage_pct": coverage_pct,
+            "wi_sales_text": wi_sales_text
+        })
 
 # --- MASTER DASHBOARD ---
 with tabs[-1]:
@@ -580,6 +607,16 @@ with tabs[-1]:
         goal_cf_text = get_cashflow_text(res['reg'], res['ext'], res['n'])
         goal_cf_html = "".join([f"<li style='font-size: 14px; margin-bottom: 4px;'>{t}</li>" for t in goal_cf_text]) if goal_cf_text else "<li>Καμία Ροή</li>"
         
+        wi_export_html = ""
+        if res.get('wi_sales_text'):
+            wi_export_html = f"""
+            <div style='margin-top: 15px; padding: 15px; background-color: #e8f4f8; border-left: 4px solid #2A9D8F; border-radius: 4px;'>
+                <h4 style='margin-top: 0; margin-bottom: 5px; color: #2A9D8F; font-size: 15px;'>🔄 Αποτελέσματα Εναλλακτικού Σεναρίου (Αντίστροφη Αναζήτηση)</h4>
+                <p style='margin: 0 0 10px 0; font-size: 14px;'><b>Εκτιμώμενο Κεφάλαιο στη Λήξη:</b> {format_gr(res['wi_fv'])} € ({format_gr(res['wi_coverage_pct'])}% κάλυψη στόχου)</p>
+                <p style='margin: 0; font-size: 14px; color: #333;'>{res['wi_sales_text']}</p>
+            </div>
+            """
+        
         goals_short_html += f"""
         <div style='background: #f4f6f9; padding: 15px; margin-bottom: 10px; border-radius: 8px;'>
             <h3 style='margin-top: 0; color: #1E3A8A;'>{res['name']}</h3>
@@ -590,6 +627,7 @@ with tabs[-1]:
                 <p style='margin-bottom: 5px; font-weight: bold; color: #555;'>Ταμειακές Ροές Στόχου:</p>
                 <ul style='padding: 5px 20px; background: none; border: none;'>{goal_cf_html}</ul>
             </div>
+            {wi_export_html}
         </div>
         """
         
@@ -619,6 +657,7 @@ with tabs[-1]:
                 <p style='margin-bottom: 5px; font-weight: bold; color: #555;'>Απαιτούμενες Ταμειακές Ροές Στόχου:</p>
                 <ul style='padding: 5px 20px; background: none; border: none;'>{goal_cf_html}</ul>
             </div>
+            {wi_export_html}
         </div>
         """
 
