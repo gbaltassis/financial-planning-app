@@ -130,7 +130,6 @@ all_results = []
 total_allocated = 0.0
 max_years = 0
 
-# Υπολογισμός συνολικού δεσμευμένου κεφαλαίου για UI
 allocated_list = []
 for i in range(ng_val):
     alloc = st.session_state.get(f"pv_{i}", None)
@@ -144,7 +143,6 @@ if temp_total_allocated > tc_val and tc_val > 0:
     excess = temp_total_allocated - tc_val
     st.sidebar.error(f"🚨 **Υπέρβαση Κεφαλαίου κατά {format_gr(excess)} €!**\n\nΜειώστε τις δεσμεύσεις σας στους Στόχους.")
 
-# Επίλυση για κάθε Στόχο
 for i in range(ng_val):
     with tabs[i]:
         st.header(f"Ρυθμίσεις Στόχου {i+1}")
@@ -179,7 +177,6 @@ for i in range(ng_val):
         if n_val > max_years:
             max_years = n_val
 
-        # --- ΓΕΝΝΗΤΡΙΑ ΚΥΚΛΩΝ ΑΠΟΔΟΣΗΣ ---
         rates_percent = []
         if n_val > 0:
             st.markdown("<span style='font-size:15px; font-weight:bold; color:#1E3A8A;'>Καθορισμός Αποδόσεων ανά Κύκλο (Glide Path)</span>", unsafe_allow_html=True)
@@ -263,7 +260,6 @@ for i in range(ng_val):
         flex2.markdown("<span style='font-size:14px; font-weight:bold; color:#555;'>Έκτακτες Καταβολές (Η απόδοση ενημερώνεται αυτόματα)</span>", unsafe_allow_html=True)
         edited_df = flex2.data_editor(df_extra_init, hide_index=True, use_container_width=True, disabled=["Έτος", "Απόδοση (%)"], key=f"df_{i}")
         
-        # --- ΑΝΑΛΟΓΙΣΤΙΚΗ ΜΗΧΑΝΗ ---
         if n_val > 0:
             rates = [r / 100.0 for r in rates_percent]
             ext_contribs = edited_df["Έκτακτη (€)"].tolist()[:n_val]
@@ -392,7 +388,7 @@ for i in range(ng_val):
         else:
             st.info("Εισάγετε δεδομένα για να δείτε το γράφημα.")
             
-        # --- WHAT-IF ΑΝΑΛΥΣΗ (ΑΝΤΙΣΤΡΟΦΗ ΑΝΑΖΗΤΗΣΗ) ---
+        # --- WHAT-IF ΑΝΑΛΥΣΗ ---
         st.markdown("---")
         wi_fv = 0.0
         coverage_pct = 0.0
@@ -437,15 +433,15 @@ for i in range(ng_val):
                 if target_fv > 0:
                     if target_type == "Εφάπαξ":
                         sec_lump = target_today_val * coverage_ratio
-                        wi_sales_text = f"💡 Πρακτικά, με αυτό το σενάριο εξασφαλίζετε <b>{format_gr(sec_lump)} €</b> (σε σημερινή αγοραστική αξία) από τα {format_gr(target_today_val)} € που επιθυμείτε συνολικά."
+                        wi_sales_text = f"Πρακτικά, με αυτό το ρεαλιστικό σενάριο εξασφαλίζετε <b>{format_gr(sec_lump)} €</b> (σε σημερινή αγοραστική αξία) από τα {format_gr(target_today_val)} € που ήταν ο αρχικός σας στόχος."
                     elif target_type == "Μηνιαίες Δόσεις":
                         sec_mi = monthly_income_val * coverage_ratio
-                        wi_sales_text = f"💡 Πρακτικά, με αυτό το σενάριο εξασφαλίζετε <b>{format_gr(sec_mi)} € / μήνα</b> (σε σημερινή αγοραστική αξία) για ολόκληρη τη διάρκεια των {m_val} ετών, από τα {format_gr(monthly_income_val)} € που επιθυμείτε."
+                        wi_sales_text = f"Πρακτικά, με αυτό το ρεαλιστικό σενάριο έχετε εξασφαλίσει <b>{format_gr(sec_mi)} € / μήνα</b> (σε σημερινή αγοραστική δύναμη) για ολόκληρη τη διάρκεια των {m_val} ετών, από τα {format_gr(monthly_income_val)} € που επιθυμείτε."
                     else:
                         sec_ils = initial_lump_sum_val * coverage_ratio
                         sec_als = annual_lump_sum_val * coverage_ratio
                         sec_mi = monthly_income_val * coverage_ratio
-                        wi_sales_text = f"💡 Πρακτικά, με αυτό το σενάριο εξασφαλίζετε αναλογικά (σε σημερινή αξία):<br>• Αρχικό Εφάπαξ: <b>{format_gr(sec_ils)} €</b><br>• Ετήσιο Εφάπαξ: <b>{format_gr(sec_als)} €</b><br>• Μηνιαίο Εισόδημα: <b>{format_gr(sec_mi)} € / μήνα</b>"
+                        wi_sales_text = f"Πρακτικά, με αυτό το ρεαλιστικό σενάριο έχετε εξασφαλίσει αναλογικά (σε σημερινή αξία):<br>• <b>{format_gr(sec_ils)} €</b> Αρχικό Εφάπαξ<br>• <b>{format_gr(sec_als)} €</b> Ετήσιο Εφάπαξ<br>• <b>{format_gr(sec_mi)} € / μήνα</b> Εισόδημα"
                 
                 st.markdown("#### 📊 Αποτελέσματα Εναλλακτικού Σεναρίου")
                 cw1, cw2, cw3 = st.columns(3)
@@ -456,7 +452,7 @@ for i in range(ng_val):
                 st.progress(min(coverage_pct / 100, 1.0))
                 
                 if wi_sales_text:
-                    st.markdown(f"<div style='padding: 15px; background-color: #e8f4f8; border-left: 5px solid #2A9D8F; border-radius: 5px; margin-top: 15px; color: #1e293b;'>{wi_sales_text}</div>", unsafe_allow_html=True)
+                    st.markdown(f"<div style='padding: 15px; background-color: #e8f4f8; border-left: 5px solid #2A9D8F; border-radius: 5px; margin-top: 15px; color: #1e293b;'>💡 {wi_sales_text}</div>", unsafe_allow_html=True)
                 
                 if coverage_pct < 100:
                     shortfall_wi = target_fv - wi_fv
@@ -466,7 +462,6 @@ for i in range(ng_val):
             else:
                 st.info("Συμπληρώστε τα έτη συσσώρευσης στο Βήμα 1 για να εμφανιστεί η ανάλυση.")
         
-        # ΠΡΟΣΘΗΚΗ ΟΛΩΝ ΤΩΝ ΔΕΔΟΜΕΝΩΝ ΣΤΟ ЛΕΞΙΚΟ ΓΙΑ ΠΛΗΡΗ ΕΞΑΓΩΓΗ
         all_results.append({
             "name": goal_name_val,
             "allocated_pv": alloc_val,
@@ -576,27 +571,71 @@ with tabs[-1]:
     </table>
     """
     
+    # CSS που μεταμορφώνει το έγγραφο σε παρουσίαση επιπέδου Marketing (Infographics)
     print_button_html = """
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap');
+        
+        body { 
+            font-family: 'Roboto', Tahoma, Geneva, Verdana, sans-serif; 
+            color: #2b2b2b; 
+            line-height: 1.6; 
+            padding: 40px; 
+            max-width: 1000px; 
+            margin: 0 auto; 
+            background-color: #fafbfc;
+        }
+        
         @media print {
             .no-print { display: none !important; }
-            body { padding: 0 !important; margin: 0 !important; }
+            body { padding: 0 !important; margin: 0 !important; background-color: #fff; }
+            .goal-card { page-break-inside: avoid; }
         }
+        
         .print-btn {
-            background-color: #1E3A8A;
-            color: white;
-            border: none;
-            padding: 12px 24px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 16px;
-            font-weight: bold;
-            margin-bottom: 25px;
-            display: inline-block;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            transition: background-color 0.3s;
+            background-color: #1E3A8A; color: white; border: none; padding: 12px 24px; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: bold; margin-bottom: 25px; display: inline-block; box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: background-color 0.3s;
         }
         .print-btn:hover { background-color: #152d6b; }
+        
+        /* Infographic CSS Elements */
+        .summary-dashboard { display: flex; justify-content: space-between; gap: 15px; margin-bottom: 30px; }
+        .kpi-box { flex: 1; background: #fff; border-radius: 10px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.04); border-top: 4px solid #1E3A8A; text-align: center; }
+        .kpi-box.warning { border-top: 4px solid #e63946; }
+        .kpi-title { font-size: 13px; color: #666; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 700; margin-bottom: 10px; }
+        .kpi-value { font-size: 24px; color: #1E3A8A; font-weight: 700; margin: 0; }
+        .kpi-value.warning { color: #e63946; }
+        
+        .goal-card { background: #fff; padding: 30px; border-radius: 12px; margin-bottom: 30px; box-shadow: 0 5px 20px rgba(0,0,0,0.03); }
+        .goal-header { border-bottom: 2px solid #f0f2f5; padding-bottom: 15px; margin-bottom: 20px; }
+        .goal-header h3 { margin: 0; color: #1E3A8A; font-size: 24px; display: flex; align-items: center; gap: 10px; }
+        
+        .story-section { margin-bottom: 25px; }
+        .story-title { font-size: 18px; color: #2A9D8F; font-weight: 700; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+        .story-text { font-size: 15px; color: #444; background: #f8f9fa; padding: 15px 20px; border-radius: 8px; border-left: 4px solid #2A9D8F; margin: 0; }
+        
+        .strategy-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px; }
+        .strategy-item { background: #f0f4f8; padding: 12px 15px; border-radius: 6px; font-size: 14px; }
+        .strategy-item span { display: block; font-size: 12px; color: #666; text-transform: uppercase; }
+        .strategy-item strong { color: #1E3A8A; font-size: 16px; }
+        
+        .action-plan { background: #fff9f0; padding: 20px; border-radius: 8px; border: 1px solid #ffe8cc; margin-top: 25px; }
+        .action-title { color: #d97706; font-weight: 700; font-size: 16px; margin-top: 0; margin-bottom: 15px; border-bottom: 1px solid #ffe8cc; padding-bottom: 10px; }
+        .cashflow-list { list-style: none; padding: 0; margin: 0; }
+        .cashflow-list li { position: relative; padding-left: 20px; margin-bottom: 8px; font-size: 15px; }
+        .cashflow-list li::before { content: '→'; position: absolute; left: 0; color: #FF9F1C; font-weight: bold; }
+        
+        .whatif-box { background: #f1f8f6; padding: 25px; border-radius: 8px; margin-top: 30px; border: 1px solid #d4ece6; }
+        .whatif-title { color: #1c7b70; margin-top: 0; display: flex; align-items: center; gap: 8px; font-size: 18px; border-bottom: 1px solid #d4ece6; padding-bottom: 10px; }
+        
+        /* Custom Progress Bar CSS */
+        .progress-wrapper { margin: 20px 0; }
+        .progress-labels { display: flex; justify-content: space-between; font-size: 13px; font-weight: 700; color: #555; margin-bottom: 5px; }
+        .progress-track { height: 16px; background: #e2e8f0; border-radius: 10px; overflow: hidden; position: relative; }
+        .progress-fill { height: 100%; background: linear-gradient(90deg, #2A9D8F 0%, #34d399 100%); transition: width 0.5s ease; }
+        
+        .sales-highlight { background: #fff; border-left: 4px solid #FF9F1C; padding: 15px; border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); margin-top: 15px; font-size: 15px; color: #1e293b; font-weight: 500; }
+        
+        .footer { margin-top: 50px; font-size: 12px; color: #777; text-align: center; border-top: 1px solid #ddd; padding-top: 20px; }
     </style>
     <div class="no-print" style="text-align: right;">
         <button class="print-btn" onclick="window.print()">🖨️ Εκτύπωση / Αποθήκευση σε PDF</button>
@@ -605,7 +644,6 @@ with tabs[-1]:
     
     html_master_cf_list = "".join([f"<li>{t}</li>" for t in master_cf_text]) if master_cf_text else "<li>Δεν υπάρχουν ταμειακές ροές.</li>"
     
-    goals_short_html = ""
     detailed_goals_html = ""
     
     for res in all_results:
@@ -614,167 +652,123 @@ with tabs[-1]:
         
         rates_str = get_rates_text(res['rates'], res['n'])
         goal_cf_text = get_cashflow_text(res['reg'], res['ext'], res['n'])
-        goal_cf_html = "".join([f"<li style='font-size: 14px; margin-bottom: 4px;'>{t}</li>" for t in goal_cf_text]) if goal_cf_text else "<li>Καμία Ροή</li>"
+        goal_cf_html = "".join([f"<li>{t}</li>" for t in goal_cf_text]) if goal_cf_text else "<li>Καμία επιπλέον ροή δεν απαιτείται. Το κεφάλαιο επαρκεί.</li>"
         
-        # --- HTML Target Parameters (ΓΙΑ ΤΗΝ ΑΝΑΛΥΤΙΚΗ ΕΞΑΓΩΓΗ) ---
-        target_params_html = ""
+        # --- Αφήγηση Στόχου ---
         if res['target_type'] == "Εφάπαξ":
-            target_params_html = f"<li><b>Επιθυμητό Εφάπαξ (Σε Σημερινή Αξία):</b> {format_gr(res['target_today'])} €</li>"
+            target_desc = f"συνολικό εφάπαξ κεφάλαιο ύψους <b>{format_gr(res['target_today'])} €</b> (σε σημερινή αγοραστική δύναμη)"
         elif res['target_type'] == "Μηνιαίες Δόσεις":
-            target_params_html = f"<li><b>Επιθυμητό Μηνιαίο Εισόδημα (Σε Σημερινή Αξία):</b> {format_gr(res['monthly_income'])} €</li><li><b>Έτη Εισοδήματος:</b> {res['m']}</li>"
+            target_desc = f"ένα σταθερό μηνιαίο εισόδημα <b>{format_gr(res['monthly_income'])} €</b> για διάστημα <b>{res['m']} ετών</b>"
         else:
-            target_params_html = f"<li><b>Αρχικό Εφάπαξ (Σε Σημερινή Αξία):</b> {format_gr(res['initial_lump_sum'])} €</li><li><b>Ετήσιο Εφάπαξ (Σε Σημερινή Αξία):</b> {format_gr(res['annual_lump_sum'])} €</li><li><b>Μηνιαίο Εισόδημα (Σε Σημερινή Αξία):</b> {format_gr(res['monthly_income'])} €</li><li><b>Έτη Δόσεων:</b> {res['m']}</li>"
+            target_desc = f"έναν συνδυασμό παροχών: <b>{format_gr(res['initial_lump_sum'])} €</b> ως αρχικό εφάπαξ, <b>{format_gr(res['annual_lump_sum'])} €</b> ετησίως και <b>{format_gr(res['monthly_income'])} €</b> τον μήνα για <b>{res['m']} χρόνια</b>"
 
-        # --- HTML What-If Εναλλακτικό Σενάριο ---
+        # --- Αφήγηση Εναλλακτικού Σεναρίου (What-If) ---
         wi_export_html = ""
         if res.get('wi_sales_text'):
-            wi_ext_text = ""
-            if sum(res.get('wi_ext', [])) > 0:
-                wi_ext_text = "<br>• <b>Έκτακτες Καταβολές:</b> Ναι (Έχουν συμπεριληφθεί στον υπολογισμό)"
+            wi_ext_text = f"<br>• Έκτακτες καταβολές: <b>Ναι</b>" if sum(res.get('wi_ext', [])) > 0 else ""
+            fill_pct = min(res['wi_coverage_pct'], 100)
             
             wi_export_html = f"""
-            <div style='margin-top: 15px; padding: 15px; background-color: #e8f4f8; border-left: 4px solid #2A9D8F; border-radius: 4px; color: #1e293b;'>
-                <h4 style='margin-top: 0; margin-bottom: 10px; color: #2A9D8F; font-size: 15px;'>🔄 Αποτελέσματα Εναλλακτικού Σεναρίου (Αντίστροφη Αναζήτηση)</h4>
-                <div style='margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid #cce3ec; font-size: 13px;'>
-                    <b>Παράμετροι που επιλέχθηκαν:</b><br>
-                    • Διαθέσιμο Εφάπαξ: <b>{format_gr(res.get('wi_lump', 0))} €</b><br>
-                    • Τακτική Καταβολή ({res.get('wi_freq', '')}): <b>{format_gr(res.get('wi_pmt_freq', 0))} €</b><br>
-                    • Ετήσια Αύξηση Δόσης: <b>{format_gr(res.get('wi_g', 0)*100)}%</b>{wi_ext_text}
+            <div class="whatif-box">
+                <h4 class="whatif-title">🔄 Η Σημερινή σας Πραγματικότητα (Εναλλακτικό Σενάριο)</h4>
+                <p style="font-size: 14px; margin-bottom: 15px;">Ας δούμε τι ακριβώς πετυχαίνουμε με βάση τις σημερινές σας δυνατότητες αποταμίευσης. Υπολογίσαμε το παρακάτω σενάριο ρευστότητας:</p>
+                
+                <div class="strategy-grid" style="grid-template-columns: repeat(4, 1fr); margin-bottom: 20px;">
+                    <div class="strategy-item"><span>Διαθέσιμο Εφάπαξ</span><strong>{format_gr(res.get('wi_lump', 0))} €</strong></div>
+                    <div class="strategy-item"><span>Τακτική Αποταμίευση</span><strong>{format_gr(res.get('wi_pmt_freq', 0))} € /{res.get('wi_freq', '').replace('ία', 'ίο').replace('σια', 'σιο')}</strong></div>
+                    <div class="strategy-item"><span>Ετήσια Αύξηση Δόσης</span><strong>{format_gr(res.get('wi_g', 0)*100)}%</strong></div>
+                    <div class="strategy-item"><span>Εκτιμώμενη Λήξη</span><strong>{format_gr(res['wi_fv'])} €</strong></div>
                 </div>
-                <p style='margin: 0 0 10px 0; font-size: 14px;'><b>Εκτιμώμενο Κεφάλαιο στη Λήξη:</b> {format_gr(res['wi_fv'])} € ({format_gr(res['wi_coverage_pct'])}% κάλυψη στόχου)</p>
-                <p style='margin: 0; font-size: 14px;'>{res['wi_sales_text']}</p>
+                
+                <div class="progress-wrapper">
+                    <div class="progress-labels">
+                        <span>Ποσοστό Επίτευξης Αρχικού Στόχου</span>
+                        <span style="color: #2A9D8F; font-size: 15px;">{format_gr(res['wi_coverage_pct'])}%</span>
+                    </div>
+                    <div class="progress-track">
+                        <div class="progress-fill" style="width: {fill_pct}%;"></div>
+                    </div>
+                </div>
+                
+                <div class="sales-highlight">
+                    💡 {res['wi_sales_text']}
+                </div>
             </div>
             """
         
-        goals_short_html += f"""
-        <div style='background: #f4f6f9; padding: 15px; margin-bottom: 10px; border-radius: 8px;'>
-            <h3 style='margin-top: 0; color: #1E3A8A;'>{res['name']}</h3>
-            <p><b>Διάρκεια:</b> {res['n']} έτη</p>
-            <p><b>Στόχος στη Λήξη:</b> {format_gr(res['target_fv'])} €</p>
-            <p><b>Απαιτούμενο Εφάπαξ Σήμερα:</b> {format_gr(res['lump_today'])} €</p>
-            <div style='margin-top: 10px; padding-top: 10px; border-top: 1px solid #ddd;'>
-                <p style='margin-bottom: 5px; font-weight: bold; color: #555;'>Ταμειακές Ροές Στόχου:</p>
-                <ul style='padding: 5px 20px; background: none; border: none;'>{goal_cf_html}</ul>
-            </div>
-            {wi_export_html}
-        </div>
-        """
-        
         detailed_goals_html += f"""
-        <div style='background: #f4f6f9; padding: 20px; margin-bottom: 15px; border-radius: 8px; border-left: 6px solid #1E3A8A;'>
-            <h3 style='margin-top: 0; color: #1E3A8A; font-size: 22px;'>{res['name']}</h3>
+        <div class="goal-card">
+            <div class="goal-header">
+                <h3>🎯 Στόχος: {res['name']}</h3>
+            </div>
             
-            <div style='margin-bottom: 15px; font-size: 14px; background: #ffffff; padding: 10px; border-radius: 5px; border: 1px solid #ddd;'>
-                <h4 style='margin: 0 0 8px 0; color: #1E3A8A; font-size: 15px;'>Αρχικές Παράμετροι & Στόχος</h4>
-                <ul style='margin-top: 0; margin-bottom: 0; padding-left: 20px; color: #333;'>
-                    <li><b>Δεσμευμένο Κεφάλαιο Σήμερα:</b> {format_gr(res['allocated_pv'])} €</li>
-                    {target_params_html}
+            <div class="story-section">
+                <div class="story-title">Το Όραμά σας</div>
+                <p class="story-text">Μας ζητήσατε να σχεδιάσουμε το μέλλον, ώστε σε <b>{res['n']} χρόνια από σήμερα</b> να έχετε απόλυτα εξασφαλίσει {target_desc}. Για να διασφαλίσουμε ότι τα χρήματά σας δεν θα χάσουν την αξία τους, έχουμε συνυπολογίσει έναν μέσο μακροπρόθεσμο πληθωρισμό <b>{res['inf']*100:.2f}%</b>.</p>
+            </div>
+
+            <div class="story-section">
+                <div class="story-title">Η Επενδυτική Στρατηγική μας</div>
+                <p class="story-text" style="background: #fdfdfd; border-color: #1E3A8A;">Για να προστατέψουμε το κεφάλαιό σας, θα εφαρμόσουμε μια δυναμική στρατηγική (Glide Path). Αξιοποιώντας το σημερινό δεσμευμένο κεφάλαιο των <b>{format_gr(res['allocated_pv'])} €</b>, θα ξεκινήσουμε με υψηλότερες αποδόσεις και σταδιακά θα "κλειδώνουμε" το κέρδος, μειώνοντας το ρίσκο όσο πλησιάζουμε στον στόχο σας.</p>
+                
+                <div class="strategy-grid">
+                    <div class="strategy-item"><span>Κύκλοι Αποδόσεων (Glide Path)</span><strong>{rates_str}</strong></div>
+                    <div class="strategy-item"><span>Απόδοση την περίοδο παροχών</span><strong>{res['r_ret']*100:.2f}%</strong></div>
+                </div>
+            </div>
+            
+            <div class="action-plan">
+                <h4 class="action-title">🚀 Το Σχέδιο Δράσης (Για 100% Επίτευξη)</h4>
+                <p style="margin-top:0; font-size: 14px; color: #555;">Για να πετύχετε τον στόχο σας στο απόλυτο ακέραιο, θα χρειαστεί σήμερα ένα <b>επιπλέον</b> εφάπαξ κεφάλαιο ύψους <b>{format_gr(res['lump_today'])} €</b>. <br>Εναλλακτικά, εάν επιλέξετε την τακτική αποταμίευση (με ετήσια αύξηση της δόσης κατά {res['g']*100:.2f}%), οι απαιτούμενες ταμειακές ροές διαμορφώνονται ως εξής:</p>
+                <ul class="cashflow-list">
+                    {goal_cf_html}
                 </ul>
             </div>
-
-            <table style='width: 100%; border-collapse: collapse; margin-bottom: 15px;'>
-                <tr>
-                    <td style='padding: 5px; width: 50%;'><b>Έτη Συσσώρευσης:</b> {res['n']}</td>
-                    <td style='padding: 5px; width: 50%;'><b>Απόδοση Συσσώρευσης:</b><br><span style="font-size:14px; color:#555;">{rates_str}</span></td>
-                </tr>
-                <tr>
-                    <td style='padding: 5px;'><b>Απόδοση Διατήρησης:</b> {res['r_ret']*100:.2f}%</td>
-                    <td style='padding: 5px;'><b>Πληθωρισμός:</b> {res['inf']*100:.2f}%</td>
-                </tr>
-                <tr>
-                    <td style='padding: 5px;'><b>Ετήσια Αύξηση Δόσης (Step-up):</b> {res['g']*100:.2f}%</td>
-                    <td style='padding: 5px;'><b>Τύπος Στόχου:</b> {res['target_type']}</td>
-                </tr>
-            </table>
             
-            <div style='border-top: 1px solid #ddd; padding-top: 10px;'>
-                <p><b>Στόχος στη Λήξη (Αναπροσαρμοσμένος):</b> {format_gr(res['target_fv'])} €</p>
-                <p><b>Απαιτούμενο Επιπλέον Εφάπαξ Σήμερα:</b> {format_gr(res['lump_today'])} €</p>
-                <p><b>Συνολικό Κεφάλαιο στη Λήξη:</b> {format_gr(res['balance_final'])} €</p>
-            </div>
-            <div style='margin-top: 15px; padding-top: 10px; border-top: 1px dashed #aaa;'>
-                <p style='margin-bottom: 5px; font-weight: bold; color: #555;'>Απαιτούμενες Ταμειακές Ροές Στόχου:</p>
-                <ul style='padding: 5px 20px; background: none; border: none;'>{goal_cf_html}</ul>
-            </div>
             {wi_export_html}
         </div>
         """
 
-    short_html_content = f"""
-    <html>
-    <head>
-        <meta charset="utf-8">
-        <title>Συνοπτικό Οικονομικό Πλάνο</title>
-        <style>
-            body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; padding: 40px; max-width: 900px; margin: 0 auto; }}
-            h2 {{ color: #2A9D8F; margin-top: 30px; }}
-            .summary-box {{ border: 2px solid #1E3A8A; padding: 20px; border-radius: 10px; margin-bottom: 30px; }}
-            ul.master-cf {{ background: #f9f9fb; padding: 20px 40px; border-radius: 8px; border-left: 5px solid #FF9F1C; }}
-            ul.master-cf li {{ margin-bottom: 10px; font-size: 16px; }}
-            .footer {{ margin-top: 50px; font-size: 12px; color: #777; text-align: center; border-top: 1px solid #ddd; padding-top: 20px; }}
-        </style>
-    </head>
-    <body>
-        {print_button_html}
-        {header_html}
-        
-        <div class="summary-box">
-            <h2>Γενική Σύνοψη</h2>
-            <p><b>Συνολικό Διαθέσιμο Κεφάλαιο:</b> {format_gr(tc_val)} €</p>
-            <p><b>Αδιάθετο Υπόλοιπο:</b> {format_gr(unallocated)} €</p>
-            <p><b>Συνολικό Εφάπαξ Κενό Σήμερα:</b> {format_gr(total_lump_required)} €</p>
-        </div>
-
-        <h2>Ανάλυση Στόχων</h2>
-        {goals_short_html}
-
-        <h2>Συγκεντρωτικό Πλάνο Ταμειακών Ροών</h2>
-        <ul class="master-cf">
-            {html_master_cf_list}
-        </ul>
-        
-        <div class="footer">
-            Δημιουργήθηκε μέσω του Συστήματος Στρατηγικού Οικονομικού Σχεδιασμού.<br>
-            Baltassis - Strategic Financial Planning Partner<br>
-        </div>
-    </body>
-    </html>
-    """
-    
     detailed_html_content = f"""
     <html>
     <head>
         <meta charset="utf-8">
-        <title>Αναλυτικό Οικονομικό Πλάνο</title>
-        <style>
-            body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; padding: 40px; max-width: 1000px; margin: 0 auto; }}
-            h2 {{ color: #2A9D8F; margin-top: 30px; border-bottom: 1px solid #eee; padding-bottom: 5px; }}
-            .summary-box {{ border: 2px solid #1E3A8A; padding: 20px; border-radius: 10px; margin-bottom: 30px; background-color: #fff; }}
-            ul.master-cf {{ background: #f9f9fb; padding: 20px 40px; border-radius: 8px; border-left: 5px solid #FF9F1C; }}
-            ul.master-cf li {{ margin-bottom: 10px; font-size: 16px; }}
-            .footer {{ margin-top: 50px; font-size: 12px; color: #777; text-align: center; border-top: 1px solid #ddd; padding-top: 20px; }}
-        </style>
+        <title>Στρατηγικό Οικονομικό Πλάνο - {display_name}</title>
+        {print_button_html}
     </head>
     <body>
-        {print_button_html}
         {header_html}
         
-        <div class="summary-box">
-            <h2>Γενική Σύνοψη Χαρτοφυλακίου</h2>
-            <p><b>Συνολικό Διαθέσιμο Κεφάλαιο Σήμερα:</b> {format_gr(tc_val)} €</p>
-            <p><b>Διαθέσιμο Κεφάλαιο προς Επένδυση (Unallocated):</b> {format_gr(unallocated)} €</p>
-            <p><b>Συνολικό Εφάπαξ Κενό Σήμερα:</b> {format_gr(total_lump_required)} €</p>
+        <h2 style="color: #1E3A8A; font-weight: 300; text-align: center; margin-bottom: 30px;">Σύνοψη Διαθέσιμου Χαρτοφυλακίου</h2>
+        
+        <div class="summary-dashboard">
+            <div class="kpi-box">
+                <div class="kpi-title">Συνολικό Διαθέσιμο Κεφάλαιο Σήμερα</div>
+                <div class="kpi-value">{format_gr(tc_val)} €</div>
+            </div>
+            <div class="kpi-box">
+                <div class="kpi-title">Διαθέσιμο Κεφάλαιο (Unallocated)</div>
+                <div class="kpi-value">{format_gr(unallocated)} €</div>
+            </div>
+            <div class="kpi-box warning">
+                <div class="kpi-title">Συνολικό Εφάπαξ Έλλειμμα (Σήμερα)</div>
+                <div class="kpi-value warning">{format_gr(total_lump_required)} €</div>
+            </div>
         </div>
 
-        <h2>Αναλυτικές Καρτέλες Στόχων</h2>
+        <h2 style="color: #1E3A8A; font-weight: 300; margin-top: 40px; border-bottom: 2px solid #eee; padding-bottom: 10px;">Αναλυτική Χαρτογράφηση Στόχων</h2>
         {detailed_goals_html}
 
-        <h2>Συγκεντρωτικό Πλάνο Ταμειακών Ροών (Όλοι οι Στόχοι)</h2>
-        <ul class="master-cf">
-            {html_master_cf_list}
-        </ul>
+        <h2 style="color: #1E3A8A; font-weight: 300; margin-top: 40px; border-bottom: 2px solid #eee; padding-bottom: 10px;">Ολιστικό Σχέδιο Ταμειακών Ροών</h2>
+        <div class="action-plan" style="background: #fff; border: 1px solid #e2e8f0;">
+            <p style="margin-top:0; font-size: 15px; color: #555;">Παρακάτω παρουσιάζεται το άθροισμα όλων των απαιτούμενων ταμειακών ροών (για όλους τους στόχους) προκειμένου να πετύχετε την πλήρη οικονομική σας ανεξαρτησία βάσει του αρχικού σχεδιασμού:</p>
+            <ul class="cashflow-list" style="margin-top: 15px;">
+                {html_master_cf_list}
+            </ul>
+        </div>
         
         <div class="footer">
+            <strong>Αυτή η έκθεση αποτελεί τον προσωπικό σας χάρτη για την οικονομική σας εξασφάλιση.</strong><br><br>
             Δημιουργήθηκε μέσω του Συστήματος Στρατηγικού Οικονομικού Σχεδιασμού.<br>
             Baltassis - Strategic Financial Planning Partner<br>
         </div>
@@ -784,16 +778,16 @@ with tabs[-1]:
     
     with col_export1:
         st.download_button(
-            label="📄 Σύντομη Εξαγωγή",
-            data=short_html_content,
-            file_name=f"Financial_Plan_Short{safe_name}.html",
+            label="📄 Σύντομη Εξαγωγή (Απλή HTML)",
+            data=detailed_html_content, # Ενοποιήσαμε την ποιότητα.
+            file_name=f"Financial_Plan_Overview{safe_name}.html",
             mime="text/html",
             use_container_width=True
         )
         
     with col_export2:
         st.download_button(
-            label="📊 Αναλυτική Εξαγωγή (Χωρίς Γράφημα)",
+            label="📊 Αναλυτική Εξαγωγή (Οπτική Infographic / PDF)",
             data=detailed_html_content,
             file_name=f"Financial_Plan_Detailed{safe_name}.html",
             mime="text/html",
