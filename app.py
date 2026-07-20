@@ -387,10 +387,12 @@ for i in range(ng_val):
             fig.add_trace(go.Bar(x=years_list, y=reg_contribs, name='Τακτική', marker_color='#FF9F1C'))
             fig.add_trace(go.Bar(x=years_list, y=ext_contribs, name='Έκτακτη', marker_color='#2A9D8F'))
             fig.add_trace(go.Scatter(x=years_list, y=balance, name='Κεφάλαιο', mode='lines+markers', marker_color='#1E3A8A'))
-            fig.update_layout(xaxis_title="Έτη", yaxis_title="Ποσό (€)", barmode='stack', hovermode="x unified", plot_bgcolor='rgba(0,0,0,0)', margin=dict(l=0,r=0,t=20,b=0))
+            # Διόρθωση: Προστέθηκαν περιθώρια (margin) και ξεκάθαρα χρώματα αξόνων για να φαίνονται τα νούμερα στην εκτύπωση/εξαγωγή
+            fig.update_layout(xaxis_title="Έτη", yaxis_title="Ποσό (€)", barmode='stack', hovermode="x unified", plot_bgcolor='rgba(0,0,0,0)', margin=dict(t=30, l=60, b=40, r=20), font=dict(color="#333"))
+            fig.update_xaxes(showline=True, linewidth=1, linecolor='#ccc', gridcolor='#eee', tickfont=dict(color='#333'))
+            fig.update_yaxes(showline=True, linewidth=1, linecolor='#ccc', gridcolor='#eee', tickfont=dict(color='#333'))
             st.plotly_chart(fig, use_container_width=True)
             
-            # Δημιουργία διαδραστικού HTML κώδικα του γραφήματος για εξαγωγή (χωρίς χρήση εξωτερικών scripts εδώ, θα φορτωθεί από CDN στο HTML file)
             fig_html = fig.to_html(full_html=False, include_plotlyjs=False, default_height='400px', default_width='100%', config={'displayModeBar': False})
         else:
             st.info("Εισάγετε δεδομένα για να δείτε το γράφημα.")
@@ -555,7 +557,10 @@ with tabs[-1]:
         fig_master = go.Figure()
         fig_master.add_trace(go.Bar(x=master_years, y=master_reg, name='Σύνολο Τακτικών Καταβολών', marker_color='#FF9F1C'))
         fig_master.add_trace(go.Bar(x=master_years, y=master_ext, name='Σύνολο Έκτακτων Καταβολών', marker_color='#2A9D8F'))
-        fig_master.update_layout(xaxis_title="Έτος Σχεδιασμού", yaxis_title="Συνολικό Απαιτούμενο Ποσό (€)", barmode='stack', hovermode="x unified", plot_bgcolor='rgba(0,0,0,0)')
+        # Διόρθωση ορατότητας γραφήματος για Master
+        fig_master.update_layout(xaxis_title="Έτος Σχεδιασμού", yaxis_title="Συνολικό Απαιτούμενο Ποσό (€)", barmode='stack', hovermode="x unified", plot_bgcolor='rgba(0,0,0,0)', margin=dict(t=30, l=60, b=40, r=20), font=dict(color="#333"))
+        fig_master.update_xaxes(showline=True, linewidth=1, linecolor='#ccc', gridcolor='#eee', tickfont=dict(color='#333'))
+        fig_master.update_yaxes(showline=True, linewidth=1, linecolor='#ccc', gridcolor='#eee', tickfont=dict(color='#333'))
         st.plotly_chart(fig_master, use_container_width=True)
         
         master_chart_html = fig_master.to_html(full_html=False, include_plotlyjs=False, default_height='400px', default_width='100%', config={'displayModeBar': False})
@@ -582,6 +587,7 @@ with tabs[-1]:
     </table>
     """
     
+    # CSS που μεταμορφώνει το έγγραφο σε παρουσίαση επιπέδου Marketing (Infographics)
     print_button_html = """
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap');
@@ -607,7 +613,7 @@ with tabs[-1]:
         }
         .print-btn:hover { background-color: #152d6b; }
         
-        /* Infographic CSS Elements - Αφαιρέθηκε το text-transform: uppercase για να μην χαλάει τους τόνους */
+        /* Infographic CSS Elements */
         .summary-dashboard { display: flex; justify-content: space-between; gap: 15px; margin-bottom: 30px; }
         .kpi-box { flex: 1; background: #fff; border-radius: 10px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.04); border-top: 4px solid #1E3A8A; text-align: center; }
         .kpi-box.warning { border-top: 4px solid #e63946; }
@@ -719,7 +725,7 @@ with tabs[-1]:
                 
                 <div class="progress-wrapper">
                     <div class="progress-labels">
-                        <span>Ποσοστό Επίτευξης Αρχικού Στόχου</span>
+                        <span>Ποσοστό Επίτευξης Αρχικού Στόχου ({format_gr(res['target_fv'])} €)</span>
                         <span style="color: #2A9D8F; font-size: 15px;">{format_gr(res['wi_coverage_pct'])}%</span>
                     </div>
                     <div class="progress-track">
@@ -812,9 +818,9 @@ with tabs[-1]:
         <h2 style="color: #1E3A8A; font-weight: 300; margin-top: 40px; border-bottom: 2px solid #eee; padding-bottom: 10px;">Αναλυτική Χαρτογράφηση Στόχων</h2>
         {detailed_goals_html}
 
-        <h2 style="color: #1E3A8A; font-weight: 300; margin-top: 40px; border-bottom: 2px solid #eee; padding-bottom: 10px;">Ολιστικό Σχέδιο Ταμειακών Ροών</h2>
+        <h2 style="color: #1E3A8A; font-weight: 300; margin-top: 40px; border-bottom: 2px solid #eee; padding-bottom: 10px;">Ολιστικό Σχέδιο Ταμειακών Ροών για 100% Επίτευξη των Στόχων</h2>
         <div class="action-plan" style="background: #fff; border: 1px solid #e2e8f0;">
-            <p style="margin-top:0; font-size: 15px; color: #555;">Παρακάτω παρουσιάζεται το άθροισμα όλων των απαιτούμενων ταμειακών ροών (για όλους τους στόχους) προκειμένου να πετύχετε την πλήρη οικονομική σας ανεξαρτησία βάσει του αρχικού σχεδιασμού:</p>
+            <p style="margin-top:0; font-size: 15px; color: #555;">Για την πλήρη και ταυτόχρονη επίτευξη όλων των παραπάνω στόχων σας, υπάρχουν δύο εναλλακτικοί δρόμοι. Μπορείτε είτε να καλύψετε το κενό με μία <b>επιπλέον εφάπαξ καταβολή σήμερα ύψους {format_gr(total_lump_required)} €</b>, είτε να ακολουθήσετε το παρακάτω άθροισμα τακτικών ταμειακών ροών:</p>
             <ul class="cashflow-list" style="margin-top: 15px;">
                 {html_master_cf_list}
             </ul>
