@@ -130,6 +130,7 @@ all_results = []
 total_allocated = 0.0
 max_years = 0
 
+# Υπολογισμός συνολικού δεσμευμένου κεφαλαίου για UI
 allocated_list = []
 for i in range(ng_val):
     alloc = st.session_state.get(f"pv_{i}", None)
@@ -143,6 +144,7 @@ if temp_total_allocated > tc_val and tc_val > 0:
     excess = temp_total_allocated - tc_val
     st.sidebar.error(f"🚨 **Υπέρβαση Κεφαλαίου κατά {format_gr(excess)} €!**\n\nΜειώστε τις δεσμεύσεις σας στους Στόχους.")
 
+# Επίλυση για κάθε Στόχο
 for i in range(ng_val):
     with tabs[i]:
         st.header(f"Ρυθμίσεις Στόχου {i+1}")
@@ -260,6 +262,7 @@ for i in range(ng_val):
         flex2.markdown("<span style='font-size:14px; font-weight:bold; color:#555;'>Έκτακτες Καταβολές (Η απόδοση ενημερώνεται αυτόματα)</span>", unsafe_allow_html=True)
         edited_df = flex2.data_editor(df_extra_init, hide_index=True, use_container_width=True, disabled=["Έτος", "Απόδοση (%)"], key=f"df_{i}")
         
+        # --- ΑΝΑΛΟΓΙΣΤΙΚΗ ΜΗΧΑΝΗ ---
         if n_val > 0:
             rates = [r / 100.0 for r in rates_percent]
             ext_contribs = edited_df["Έκτακτη (€)"].tolist()[:n_val]
@@ -378,6 +381,7 @@ for i in range(ng_val):
                 st.write(f"🔹 {text.replace('<b>', '**').replace('</b>', '**')}")
 
         st.markdown("### 📈 Εξέλιξη Κεφαλαίου")
+        fig_html = ""
         if n_val > 0:
             fig = go.Figure()
             fig.add_trace(go.Bar(x=years_list, y=reg_contribs, name='Τακτική', marker_color='#FF9F1C'))
@@ -385,6 +389,9 @@ for i in range(ng_val):
             fig.add_trace(go.Scatter(x=years_list, y=balance, name='Κεφάλαιο', mode='lines+markers', marker_color='#1E3A8A'))
             fig.update_layout(xaxis_title="Έτη", yaxis_title="Ποσό (€)", barmode='stack', hovermode="x unified", plot_bgcolor='rgba(0,0,0,0)', margin=dict(l=0,r=0,t=20,b=0))
             st.plotly_chart(fig, use_container_width=True)
+            
+            # Δημιουργία διαδραστικού HTML κώδικα του γραφήματος για εξαγωγή (χωρίς χρήση εξωτερικών scripts εδώ, θα φορτωθεί από CDN στο HTML file)
+            fig_html = fig.to_html(full_html=False, include_plotlyjs=False, default_height='400px', default_width='100%', config={'displayModeBar': False})
         else:
             st.info("Εισάγετε δεδομένα για να δείτε το γράφημα.")
             
@@ -481,6 +488,7 @@ for i in range(ng_val):
             "lump_today": lump_sum_today,
             "target_fv": target_fv,
             "balance_final": balance[-1] if len(balance) > 0 else 0.0,
+            "chart_html": fig_html,
             "wi_fv": wi_fv,
             "wi_coverage_pct": coverage_pct,
             "wi_sales_text": wi_sales_text,
@@ -524,6 +532,7 @@ with tabs[-1]:
     master_reg = []
     master_ext = []
     master_cf_text = []
+    master_chart_html = ""
     
     if max_years > 0:
         master_years = list(range(1, max_years + 1))
@@ -548,6 +557,8 @@ with tabs[-1]:
         fig_master.add_trace(go.Bar(x=master_years, y=master_ext, name='Σύνολο Έκτακτων Καταβολών', marker_color='#2A9D8F'))
         fig_master.update_layout(xaxis_title="Έτος Σχεδιασμού", yaxis_title="Συνολικό Απαιτούμενο Ποσό (€)", barmode='stack', hovermode="x unified", plot_bgcolor='rgba(0,0,0,0)')
         st.plotly_chart(fig_master, use_container_width=True)
+        
+        master_chart_html = fig_master.to_html(full_html=False, include_plotlyjs=False, default_height='400px', default_width='100%', config={'displayModeBar': False})
     else:
         st.info("Συμπληρώστε τις παραμέτρους στους επιμέρους Στόχους για να δημιουργηθεί το πλάνο.")
 
@@ -571,7 +582,6 @@ with tabs[-1]:
     </table>
     """
     
-    # CSS που μεταμορφώνει το έγγραφο σε παρουσίαση επιπέδου Marketing (Infographics)
     print_button_html = """
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap');
@@ -597,11 +607,11 @@ with tabs[-1]:
         }
         .print-btn:hover { background-color: #152d6b; }
         
-        /* Infographic CSS Elements */
+        /* Infographic CSS Elements - Αφαιρέθηκε το text-transform: uppercase για να μην χαλάει τους τόνους */
         .summary-dashboard { display: flex; justify-content: space-between; gap: 15px; margin-bottom: 30px; }
         .kpi-box { flex: 1; background: #fff; border-radius: 10px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.04); border-top: 4px solid #1E3A8A; text-align: center; }
         .kpi-box.warning { border-top: 4px solid #e63946; }
-        .kpi-title { font-size: 13px; color: #666; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 700; margin-bottom: 10px; }
+        .kpi-title { font-size: 13px; color: #666; font-weight: 700; margin-bottom: 10px; }
         .kpi-value { font-size: 24px; color: #1E3A8A; font-weight: 700; margin: 0; }
         .kpi-value.warning { color: #e63946; }
         
@@ -615,7 +625,7 @@ with tabs[-1]:
         
         .strategy-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px; }
         .strategy-item { background: #f0f4f8; padding: 12px 15px; border-radius: 6px; font-size: 14px; }
-        .strategy-item span { display: block; font-size: 12px; color: #666; text-transform: uppercase; }
+        .strategy-item span { display: block; font-size: 12px; color: #666; }
         .strategy-item strong { color: #1E3A8A; font-size: 16px; }
         
         .action-plan { background: #fff9f0; padding: 20px; border-radius: 8px; border: 1px solid #ffe8cc; margin-top: 25px; }
@@ -627,7 +637,6 @@ with tabs[-1]:
         .whatif-box { background: #f1f8f6; padding: 25px; border-radius: 8px; margin-top: 30px; border: 1px solid #d4ece6; }
         .whatif-title { color: #1c7b70; margin-top: 0; display: flex; align-items: center; gap: 8px; font-size: 18px; border-bottom: 1px solid #d4ece6; padding-bottom: 10px; }
         
-        /* Custom Progress Bar CSS */
         .progress-wrapper { margin: 20px 0; }
         .progress-labels { display: flex; justify-content: space-between; font-size: 13px; font-weight: 700; color: #555; margin-bottom: 5px; }
         .progress-track { height: 16px; background: #e2e8f0; border-radius: 10px; overflow: hidden; position: relative; }
@@ -654,13 +663,41 @@ with tabs[-1]:
         goal_cf_text = get_cashflow_text(res['reg'], res['ext'], res['n'])
         goal_cf_html = "".join([f"<li>{t}</li>" for t in goal_cf_text]) if goal_cf_text else "<li>Καμία επιπλέον ροή δεν απαιτείται. Το κεφάλαιο επαρκεί.</li>"
         
+        # --- Προσθήκη Target KPIs στην αρχή ---
+        kpi_target_html = f"""
+        <div class="summary-dashboard" style="margin-bottom: 20px;">
+            <div class="kpi-box" style="padding: 15px;">
+                <div class="kpi-title">Δεσμευμένο Κεφάλαιο Σήμερα</div>
+                <div class="kpi-value" style="font-size: 20px;">{format_gr(res['allocated_pv'])} €</div>
+            </div>
+            <div class="kpi-box" style="padding: 15px; border-top-color: #2A9D8F;">
+                <div class="kpi-title">Συνολικό Κεφάλαιο Στόχου (Λήξη)</div>
+                <div class="kpi-value" style="font-size: 20px; color: #2A9D8F;">{format_gr(res['target_fv'])} €</div>
+            </div>
+            <div class="kpi-box" style="padding: 15px; border-top-color: #FF9F1C;">
+                <div class="kpi-title">Απαιτούμενο Επιπλέον Εφάπαξ Σήμερα</div>
+                <div class="kpi-value" style="font-size: 20px; color: #FF9F1C;">{format_gr(res['lump_today'])} €</div>
+            </div>
+        </div>
+        """
+        
         # --- Αφήγηση Στόχου ---
         if res['target_type'] == "Εφάπαξ":
             target_desc = f"συνολικό εφάπαξ κεφάλαιο ύψους <b>{format_gr(res['target_today'])} €</b> (σε σημερινή αγοραστική δύναμη)"
         elif res['target_type'] == "Μηνιαίες Δόσεις":
-            target_desc = f"ένα σταθερό μηνιαίο εισόδημα <b>{format_gr(res['monthly_income'])} €</b> για διάστημα <b>{res['m']} ετών</b>"
+            target_desc = f"ένα σταθερό μηνιαίο εισόδημα <b>{format_gr(res['monthly_income'])} €</b> (σε σημερινή αγοραστική δύναμη) για διάστημα <b>{res['m']} ετών</b>"
         else:
-            target_desc = f"έναν συνδυασμό παροχών: <b>{format_gr(res['initial_lump_sum'])} €</b> ως αρχικό εφάπαξ, <b>{format_gr(res['annual_lump_sum'])} €</b> ετησίως και <b>{format_gr(res['monthly_income'])} €</b> τον μήνα για <b>{res['m']} χρόνια</b>"
+            target_desc = f"έναν συνδυασμό παροχών (σε σημερινή αξία): <b>{format_gr(res['initial_lump_sum'])} €</b> ως αρχικό εφάπαξ, <b>{format_gr(res['annual_lump_sum'])} €</b> ετησίως και <b>{format_gr(res['monthly_income'])} €</b> τον μήνα για <b>{res['m']} χρόνια</b>"
+
+        # --- Ενσωμάτωση Γραφήματος Στόχου (Διαδραστικό) ---
+        chart_export_html = ""
+        if res.get('chart_html'):
+            chart_export_html = f"""
+            <div class="story-section" style="margin-top: 30px; page-break-inside: avoid;">
+                <div class="story-title">Γράφημα Εξέλιξης Κεφαλαίου</div>
+                {res['chart_html']}
+            </div>
+            """
 
         # --- Αφήγηση Εναλλακτικού Σεναρίου (What-If) ---
         wi_export_html = ""
@@ -702,14 +739,16 @@ with tabs[-1]:
                 <h3>🎯 Στόχος: {res['name']}</h3>
             </div>
             
+            {kpi_target_html}
+            
             <div class="story-section">
                 <div class="story-title">Το Όραμά σας</div>
-                <p class="story-text">Μας ζητήσατε να σχεδιάσουμε το μέλλον, ώστε σε <b>{res['n']} χρόνια από σήμερα</b> να έχετε απόλυτα εξασφαλίσει {target_desc}. Για να διασφαλίσουμε ότι τα χρήματά σας δεν θα χάσουν την αξία τους, έχουμε συνυπολογίσει έναν μέσο μακροπρόθεσμο πληθωρισμό <b>{res['inf']*100:.2f}%</b>.</p>
+                <p class="story-text">Μας ζητήσατε να σχεδιάσουμε το μέλλον, ώστε σε <b>{res['n']} χρόνια από σήμερα</b> να έχετε εξασφαλίσει {target_desc}. Για να διασφαλίσουμε ότι τα χρήματά σας δεν θα χάσουν την αγοραστική τους αξία, έχουμε συνυπολογίσει έναν μέσο μακροπρόθεσμο πληθωρισμό <b>{res['inf']*100:.2f}%</b>.</p>
             </div>
 
             <div class="story-section">
                 <div class="story-title">Η Επενδυτική Στρατηγική μας</div>
-                <p class="story-text" style="background: #fdfdfd; border-color: #1E3A8A;">Για να προστατέψουμε το κεφάλαιό σας, θα εφαρμόσουμε μια δυναμική στρατηγική (Glide Path). Αξιοποιώντας το σημερινό δεσμευμένο κεφάλαιο των <b>{format_gr(res['allocated_pv'])} €</b>, θα ξεκινήσουμε με υψηλότερες αποδόσεις και σταδιακά θα "κλειδώνουμε" το κέρδος, μειώνοντας το ρίσκο όσο πλησιάζουμε στον στόχο σας.</p>
+                <p class="story-text" style="background: #fdfdfd; border-color: #1E3A8A;">Για να προστατέψουμε το κεφάλαιό σας, θα εφαρμόσουμε μια δυναμική στρατηγική (Glide Path). Θα ξεκινήσουμε με υψηλότερες αποδόσεις και σταδιακά θα "κλειδώνουμε" το κέρδος, μειώνοντας το ρίσκο όσο πλησιάζουμε στον στόχο σας.</p>
                 
                 <div class="strategy-grid">
                     <div class="strategy-item"><span>Κύκλοι Αποδόσεων (Glide Path)</span><strong>{rates_str}</strong></div>
@@ -719,21 +758,35 @@ with tabs[-1]:
             
             <div class="action-plan">
                 <h4 class="action-title">🚀 Το Σχέδιο Δράσης (Για 100% Επίτευξη)</h4>
-                <p style="margin-top:0; font-size: 14px; color: #555;">Για να πετύχετε τον στόχο σας στο απόλυτο ακέραιο, θα χρειαστεί σήμερα ένα <b>επιπλέον</b> εφάπαξ κεφάλαιο ύψους <b>{format_gr(res['lump_today'])} €</b>. <br>Εναλλακτικά, εάν επιλέξετε την τακτική αποταμίευση (με ετήσια αύξηση της δόσης κατά {res['g']*100:.2f}%), οι απαιτούμενες ταμειακές ροές διαμορφώνονται ως εξής:</p>
+                <p style="margin-top:0; font-size: 14px; color: #555;">Για να πετύχετε τον στόχο σας στο ακέραιο, θα χρειαστεί σήμερα ένα <b>επιπλέον</b> εφάπαξ κεφάλαιο ύψους <b>{format_gr(res['lump_today'])} €</b>. <br>Εναλλακτικά, εάν επιλέξετε την τακτική αποταμίευση (με ετήσια αύξηση της δόσης κατά {res['g']*100:.2f}%), οι απαιτούμενες ταμειακές ροές διαμορφώνονται ως εξής:</p>
                 <ul class="cashflow-list">
                     {goal_cf_html}
                 </ul>
             </div>
             
+            {chart_export_html}
+            
             {wi_export_html}
         </div>
         """
 
+    # --- Ενσωμάτωση Master Γραφήματος ---
+    master_chart_export = ""
+    if master_chart_html:
+        master_chart_export = f"""
+        <div class="goal-card" style="margin-top: 30px; page-break-inside: avoid;">
+            <h3 style="color: #1E3A8A; margin-top: 0; margin-bottom: 20px;">Συγκεντρωτικό Γράφημα Ταμειακών Ροών</h3>
+            {master_chart_html}
+        </div>
+        """
+
+    # --- ΤΕΛΙΚΟ HTML (Φορτώνει Plotly.js για να παίζουν τα γραφήματα) ---
     detailed_html_content = f"""
     <html>
     <head>
         <meta charset="utf-8">
         <title>Στρατηγικό Οικονομικό Πλάνο - {display_name}</title>
+        <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
         {print_button_html}
     </head>
     <body>
@@ -767,6 +820,8 @@ with tabs[-1]:
             </ul>
         </div>
         
+        {master_chart_export}
+        
         <div class="footer">
             <strong>Αυτή η έκθεση αποτελεί τον προσωπικό σας χάρτη για την οικονομική σας εξασφάλιση.</strong><br><br>
             Δημιουργήθηκε μέσω του Συστήματος Στρατηγικού Οικονομικού Σχεδιασμού.<br>
@@ -779,7 +834,7 @@ with tabs[-1]:
     with col_export1:
         st.download_button(
             label="📄 Σύντομη Εξαγωγή (Απλή HTML)",
-            data=detailed_html_content, # Ενοποιήσαμε την ποιότητα.
+            data=detailed_html_content, 
             file_name=f"Financial_Plan_Overview{safe_name}.html",
             mime="text/html",
             use_container_width=True
